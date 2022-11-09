@@ -197,7 +197,7 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
         new_filenames[i] = ar2v_to_png(filename, polygon=polygon)
     if verbose: print()
     if verbose: log_print('Generating .gif')
-    png_to_gif(new_filenames, f'outputs/{key}_NEXRAD.gif')
+    png_to_gif(new_filenames, f'outputs/{key}/{key}_NEXRAD.gif')
     
     if verbose: log_print(f'Generate the reprojection')
     owiLat, owiLon = get_iw_latlon()
