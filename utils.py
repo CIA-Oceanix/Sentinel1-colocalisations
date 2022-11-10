@@ -3,9 +3,7 @@ import utm
 import PIL.Image
 import sys
 from zipfile import ZipFile
-
 from datetime import datetime
-
 
 from mpl_toolkits.basemap import Basemap
 
@@ -27,7 +25,7 @@ def dms2dd(degrees, minutes, seconds, direction):
         dd *= -1
     return dd
 
-def LatLonGrid_from_polygon(polygon, shape):
+def grid_from_polygon(polygon, shape):
     utm_easting, utm_northing, ZONE_NUMBER, ZONE_LETTER = utm.from_latlon(polygon[:,1], polygon[:,0])
     utm_polygon = np.stack((utm_easting, utm_northing), axis=1)
     
@@ -55,6 +53,21 @@ def LatLonGrid_from_polygon(polygon, shape):
     lat_grid, lon_grid = utm.to_latlon(northing_grid, easting_grid, ZONE_NUMBER, ZONE_LETTER, strict=False)
     return lat_grid, lon_grid
 
+    
+def get_iw_latlon(polygon=None, metadata_filename=None, shape=None):
+    if metadata_filename is not None:
+        metadata = np.load(metadata_filename)
+        return metadata['owiLat'], metadata['owiLon']
+    else:
+        if shape is None:
+            log_print('Unable to generate the reprojection. Missing either metadata or shape. Deduce from latlon at 200 m/px.')
+            height = int(get_distance(polygon[0,1], polygon[0,0], polygon[1,1], polygon[1,0])*5)
+            width = int(get_distance(polygon[0,1], polygon[0,0], polygon[-1,1], polygon[-1,0])*5)
+            log_print(f'Deduced shape: ({height}, {width})')
+            return grid_from_polygon(polygon, (height, width))
+        return grid_from_polygon(polygon, shape)
+    
+
 def getter_polygon_from_key(sensoroperationalmode='IW', polarisationmode='VV', verbose=1):
     products = {}
 
@@ -71,14 +84,13 @@ def getter_polygon_from_key(sensoroperationalmode='IW', polarisationmode='VV', v
 
                 key = filename.split('_')[4].lower()
                 products[key] = (filename, polygon, orbitdirection)
-                if not i and verbose: log_print(f"First IW: {key}")
-    if verbose: log_print(f"Last IW:  {key}")
+                if not i and verbose: log_print(f"First {sensoroperationalmode}: {key}")
+    if verbose: log_print(f"Last {sensoroperationalmode}:  {key}")
     
     def get_polygon_from_key(key):
         return products[key]
     
     return get_polygon_from_key
-
 
 def ini_map(lats, lons, zoom=4, stride=1):
     min_lat = np.min(lats)
@@ -94,7 +106,7 @@ def ini_map(lats, lons, zoom=4, stride=1):
     
     m = Basemap(
         projection = "lcc",
-        resolution = 'i',
+        resolution = 'f',
         llcrnrlon = lon_0 - delta_lon/zoom, 
         llcrnrlat = lat_0 - delta_lat/zoom, 
         urcrnrlon = lon_0 + delta_lon/zoom, 

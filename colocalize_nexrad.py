@@ -16,16 +16,18 @@ import PIL.Image
 import pyart
 import sys
 import fire
+import shutil
 
 from scipy.interpolate import griddata
 
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
 matplotlib.use('agg')
 
-from utils import get_distance, dms2dd, LatLonGrid_from_polygon, getter_polygon_from_key, ini_map, png_to_gif
-from utils import log_print, r_print
+from utils import get_distance, dms2dd, grid_from_polygon, getter_polygon_from_key, ini_map, png_to_gif
+from utils import log_print, r_print, get_iw_latlon
 
 def get_nexrad_stations():
     nexrad_stations = {}
@@ -42,17 +44,18 @@ def get_nexrad_stations():
             nexrad_stations[station_id] = {"lat": lat, "lon": lon}
     return nexrad_stations
 
-def ar2v_to_png(filename, polygon=None, field_name='reflectivity'):
+def ar2v_to_png(filename, m=None, polygon=None, field_name='reflectivity'):
     radar = pyart.io.read_nexrad_archive(filename)
     lats, lons, alts = radar.get_gate_lat_lon_alt(sweep=0)
     data = radar.get_field(sweep=0, field_name='reflectivity')
 
-    plt.figure(figsize=(12,12))
 
-    
-    m = ini_map(lats, lons)
-    m.pcolormesh(lons, lats, data, latlon=True, cmap="turbo", vmin=0, vmax=40, shading='auto')
-    plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')
+    if m is None:
+        plt.figure(figsize=(12,12))
+        m = ini_map(lats, lons)
+        
+    colormesh = m.pcolormesh(lons, lats, data, latlon=True, cmap="turbo", vmin=0, vmax=40, shading='auto')
+    colorbar = plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')
     
     if polygon is not None:
         x, y = m(polygon[:,0], polygon[:,1])
@@ -65,10 +68,13 @@ def ar2v_to_png(filename, polygon=None, field_name='reflectivity'):
     
     new_filename = filename + ".png"
     plt.savefig(new_filename)
-    plt.close()
-    return new_filename
 
-def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_filename=None):
+    colorbar.remove()
+    colormesh.remove()
+    
+    return new_filename, m
+
+def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_filename=None, sensoroperationalmode='IW'):
     def get_closest_station():
         nexrad_stations = get_nexrad_stations()
         
@@ -88,8 +94,8 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
     
     def get_nexrad_day_urls():
         if verbose: log_print(f'Retrieving urls')
-        t1 = iw_datetime - timedelta(minutes=30)
-        t2 = iw_datetime + timedelta(minutes=30)
+        t1 = iw_datetime - timedelta(minutes=delta_minutes)
+        t2 = iw_datetime + timedelta(minutes=delta_minutes)
 
         url_basis = "https://noaa-nexrad-level2.s3.amazonaws.com/?list-type=2&delimiter=%2F"
         url1 = url_basis + f"&prefix={t1.year}%2F{t1.month:02}%2F{t1.day:02}%2F{closest_station}%2F"
@@ -143,21 +149,6 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
                 
         return new_filenames
     
-    def get_iw_latlon():
-        if metadata_filename is not None:
-            metadata = np.load(metadata_filename)
-            return metadata['owiLat'], metadata['owiLon']
-        else:
-            if shape is None:
-                log_print('Unable to generate the reprojection. Missing either metadata or shape. Deduce from latlon at 200 m/px.')
-                height = int(get_distance(polygon[0,1], polygon[0,0], polygon[1,1], polygon[1,0])*5)
-                width = int(get_distance(polygon[0,1], polygon[0,0], polygon[-1,1], polygon[-1,0])*5)
-                log_print(f'Deduced shape: ({height}, {width})')
-                return LatLonGrid_from_polygon(polygon, (height, width))
-            return LatLonGrid_from_polygon(polygon, shape)
-    
-        
-    
     def project_nexrad_on_iw_lat_lon():
         radar = pyart.io.read_nexrad_archive(f".temp/{os.path.split(closest_url)[1]}.ar2v")
         
@@ -175,10 +166,13 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
         new_data = np.clip(new_data, 0, 40)/40
         new_data = plt.get_cmap('turbo')(new_data)
         new_data = (new_data * 255).astype(np.uint8)
-        PIL.Image.fromarray(new_data).save(f'outputs/{key}/{key}_NEXRAD.png')
+
+        new_filename = f'outputs/{key}/{key}_NEXRAD.png'
+        PIL.Image.fromarray(new_data).save(new_filename)
+        return new_filename
         
     if verbose: log_print("Loading IW metadata")
-    getter = getter_polygon_from_key()
+    getter = getter_polygon_from_key(sensoroperationalmode=sensoroperationalmode)
     
     key = key.lower()
     iw_datetime = datetime.strptime(key, '%Y%m%dt%H%M%S')
@@ -190,19 +184,21 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
     day_urls = get_nexrad_day_urls()
     hour_urls, closest_url = get_hour_urls()
     new_filenames = download_nexrad_data()
-    
+
+    m = None
     for i, filename in enumerate(new_filenames):
         if verbose: log_print(f'Generating {i+1}/{len(new_filenames)} .png', f=r_print if i else print)
-        new_filenames[i] = ar2v_to_png(filename, polygon=polygon)
+        new_filenames[i], m = ar2v_to_png(filename, polygon=polygon, m=m)
     if verbose: print()
     if verbose: log_print('Generating .gif')
     os.makedirs('outputs/' + key, exist_ok=True)
     png_to_gif(new_filenames, f'outputs/{key}/{key}_NEXRAD.gif')
     
     if verbose: log_print(f'Generate the reprojection')
-    owiLat, owiLon = get_iw_latlon()
+    owiLat, owiLon = get_iw_latlon(polygon=polygon, metadata_filename=metadata_filename, shape=shape)
     if owiLat is not None:
-        project_nexrad_on_iw_lat_lon()
+        new_filename = project_nexrad_on_iw_lat_lon()
+        if verbose: log_print(f'Done: {new_filename}')
 
 if __name__ == "__main__":
     fire.Fire(maps_from_iw_key)
