@@ -2,8 +2,8 @@ import shutup; shutup.please()
 
 from datetime import datetime, timedelta 
 from matplotlib.patches import Polygon
-from urllib import request
-from xml.etree import ElementTree
+
+
 import cv2
 import glob
 import matplotlib
@@ -25,25 +25,16 @@ matplotlib.use('agg')
 
 from utils import get_distance, dms2dd, grid_from_polygon, getter_polygon_from_key, ini_map, png_to_gif
 from utils import log_print, r_print
-from requests_utils import routing, download_file
+from requests_utils import download_file, routing
+from goes_utils import get_goes_hour_urls, get_close_urls, increased_grid
 
-def get_lightning_map(min_lat, max_lat, min_lon, max_lon, filenames):
-    height = int(get_distance(min_lat, min_lon, max_lat, min_lon)/10)
-    width =  int(max(
-        get_distance(min_lat, min_lon, min_lat, max_lon),
-        get_distance(max_lat, min_lon, max_lat, max_lon),
-    )/10)
+def get_lightning_map(polygon, filenames, delta_factor=2):
+    lat_grid, lon_grid = increased_grid(polygon, km_per_pixel=10, delta_factor=delta_factor)
+    min_lat = lat_grid.min()
+    max_lat = lat_grid.max()
+    min_lon = lon_grid.min()
+    max_lon = lon_grid.max()
     
-    polygon = np.array(
-        [
-            [min_lon, min_lat],
-            [min_lon, max_lat],
-            [max_lon, max_lat],
-            [max_lon, min_lat]
-        ]
-    )
-    
-    lat_grid, lon_grid = grid_from_polygon(polygon, (height, width))
     data = np.zeros(lat_grid.shape)
     
     for filename in filenames:
@@ -71,45 +62,6 @@ def get_lightning_map(min_lat, max_lat, min_lon, max_lon, filenames):
     
 
 def maps_from_iw_key(key, delta_minutes=90, verbose=1, shape=None, metadata_filename=None, sensoroperationalmode='IW'):
-    def get_glm_hour_urls():
-        if verbose: log_print(f'Retrieving urls')
-
-        ts = [iw_datetime + timedelta(minutes=x) for x in range(-delta_minutes, delta_minutes+1, 60)]
-        
-        urls = {}
-        for satellite in ('goes16', 'goes17', 'goes18'):
-            url_basis = f"https://noaa-{satellite}.s3.amazonaws.com/?list-type=2"
-
-            for t in ts:
-                url = url_basis + f"&prefix=GLM-L2-LCFA%2F{t.year}%2F{t.strftime('%j')}%2F{t.hour:02}"
-                urls[satellite] = urls.get(satellite, []) + [url] 
-        return urls
-
-    def get_close_urls():
-        maximum_delta = timedelta(minutes=delta_minutes)
-
-        close_urls = {}
-        closest_url = {}
-        smallest_timedelta = {}
-        for satellite, hour_urls in hour_urls_per_satellite.items():
-            for hour_url in hour_urls:
-                req = request.urlopen(hour_url)
-                tree = ElementTree.parse(req)
-
-                for elem in tree.iter():
-                    if elem.tag.endswith('Key'):
-                        key = elem.text
-                        key_datetime = datetime.strptime(elem.text.split('_')[3][1:-1], '%Y%j%H%M%S')
-                        current_timedelta = abs(key_datetime - iw_datetime)
-                        
-                        url = f"https://noaa-{satellite}.s3.amazonaws.com/{elem.text}"
-                        if current_timedelta < maximum_delta:
-                            close_urls[satellite] =  close_urls.get(satellite, []) + [url]
-                        if satellite not in smallest_timedelta or current_timedelta < smallest_timedelta[satellite]:
-                            closest_url[satellite] = url
-                            smallest_timedelta[satellite] = current_timedelta
-        return close_urls, closest_url
-
     def get_closest_satellite():
         mean_iw_lat = np.mean(polygon[:,1])
         mean_iw_lon = np.mean(polygon[:,0])
@@ -131,26 +83,12 @@ def maps_from_iw_key(key, delta_minutes=90, verbose=1, shape=None, metadata_file
         return closest_satellite
 
     def get_lightning_maps(stride=15):
-        min_lat = np.min(polygon[:,1])
-        max_lat = np.max(polygon[:,1])
-
-        min_lon = np.min(polygon[:,0])
-        max_lon = np.max(polygon[:,0])
-
-        delta_lon = max_lon - min_lon
-        delta_lat = max_lat - min_lat
-
-        frame_min_lat = min_lat - delta_lat*2
-        frame_max_lat = max_lat + delta_lat*2
-        frame_min_lon = min_lon - delta_lon*2
-        frame_max_lon = max_lon + delta_lon*2
-        
         lightning_maps = []
         new_filenames = []
         for i in range(len(filenames)//stride):
             current_filenames = filenames[i*stride:(i+1)*stride]
             
-            lightning_map, lat_grid, lon_grid = get_lightning_map(frame_min_lat, frame_max_lat, frame_min_lon, frame_max_lon, current_filenames)
+            lightning_map, lat_grid, lon_grid = get_lightning_map(polygon, current_filenames, delta_factor=2)
             lightning_maps.append(lightning_map)
             new_filenames.append(current_filenames[len(current_filenames)//2])
         return lightning_maps, new_filenames, lat_grid, lon_grid
@@ -173,29 +111,35 @@ def maps_from_iw_key(key, delta_minutes=90, verbose=1, shape=None, metadata_file
         colorbar.remove()
         colormesh.remove()
     
+    start = datetime.now()
+    
     if verbose: log_print("Loading IW metadata")
     getter = getter_polygon_from_key(sensoroperationalmode=sensoroperationalmode)
+    if verbose: log_print("Loading OK")
 
     key = key.lower()
     iw_datetime = datetime.strptime(key, '%Y%m%dt%H%M%S')
     iw_filename, polygon, orbit = getter(key)
 
-    hour_urls_per_satellite = get_glm_hour_urls()
-    close_urls, closest_url = get_close_urls()
+    if verbose: log_print("Choose satellite")
+    hour_urls_per_satellite = get_goes_hour_urls('GLM-L2-LCFA', iw_datetime, delta_minutes=delta_minutes, verbose=verbose)
+    close_urls, closest_url = get_close_urls(iw_datetime, hour_urls_per_satellite, delta_minutes=delta_minutes)
     closest_satellite = get_closest_satellite()
+    if verbose: log_print(f"Closest satellite: {closest_satellite}")
 
     routing_args = [(url, ".temp/" + closest_satellite) for url in close_urls[closest_satellite]]
     routing(routing_args)
     filenames = [f".temp/{closest_satellite}/{os.path.split(url)[1]}" for url in close_urls[closest_satellite]]
 
+    if verbose: log_print(f"Compute lightning maps")
     lightning_maps, new_filenames, lat_grid, lon_grid = get_lightning_maps()
     vmax = max([np.nanmax(lightning_map) for lightning_map in lightning_maps])
 
-    if verbose: log_print('Initialize map')
+    if verbose: log_print('Initialize basemap')
     plt.figure(figsize=(12,12))
     m = ini_map(lat_grid, lon_grid)
 
-    if verbose: log_print(f'Generating .png')
+    if verbose: log_print(f'Generate .png')
     for new_filename, lightning_map in zip(new_filenames, lightning_maps):
         lightning_map_to_png()
 
@@ -203,6 +147,7 @@ def maps_from_iw_key(key, delta_minutes=90, verbose=1, shape=None, metadata_file
     gif_filename = f'outputs/{key}/{key}_GLM.gif'
     os.makedirs(os.path.split(gif_filename)[0], exist_ok=True)
     png_to_gif([filename+".png" for filename in new_filenames], gif_filename)
+    if verbose: print('Executed in', (datetime(1,1,1) + (datetime.now()-start)).strftime('%H hours, %M minutes, %S seconds'))
     
 if __name__ == "__main__":
     fire.Fire(maps_from_iw_key)

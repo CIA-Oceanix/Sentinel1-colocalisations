@@ -39,7 +39,7 @@ def download_file(url, folder=None):
     return filename
 
 
-def routing(args, thread_limit=20, single_wait=0, verbose=1, time_limit=10, time_sleep=10):
+def routing(args, thread_limit=10, single_wait=0, verbose=1, time_limit=600, time_sleep=10):
     thread_limit += threading.active_count()
     begin = datetime.now()
     

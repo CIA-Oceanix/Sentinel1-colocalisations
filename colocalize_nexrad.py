@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from matplotlib.patches import Polygon
 from urllib import request
 from xml.etree import ElementTree
-import cv2
 import glob
 import matplotlib
 import matplotlib.pyplot as plt
@@ -87,13 +86,10 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
                 closest_station_distance = station_distance
                 closest_station = station
                 
-        if verbose:
-            log_print(f"Closest station {closest_station} at {closest_station_distance:01} km")
         return closest_station, closest_station_distance
         
     
     def get_nexrad_day_urls():
-        if verbose: log_print(f'Retrieving urls')
         t1 = iw_datetime - timedelta(minutes=delta_minutes)
         t2 = iw_datetime + timedelta(minutes=delta_minutes)
 
@@ -115,7 +111,7 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
             tree = ElementTree.parse(req)
             for elem in tree.iter():
                 if elem.tag.endswith('Key'):
-                    key = elem.text
+                    if not elem.text.endswith('V06'): continue
                     key_datetime = datetime.strptime(os.path.split(elem.text)[1][4:-4], '%Y%m%d_%H%M%S')
                     
                     current_timedelta = abs(key_datetime - iw_datetime)
@@ -149,7 +145,7 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
                 
         return new_filenames
     
-    def project_nexrad_on_iw_lat_lon():
+    def project_nexrad_on_iw_lat_lon(shape):
         radar = pyart.io.read_nexrad_archive(f".temp/{os.path.split(closest_url)[1]}.ar2v")
         
         lats, lons, alts = radar.get_gate_lat_lon_alt(sweep=0)
@@ -170,17 +166,23 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
         new_filename = f'outputs/{key}/{key}_NEXRAD.png'
         PIL.Image.fromarray(new_data).save(new_filename)
         return new_filename
+
+    start = datetime.now()
         
     if verbose: log_print("Loading IW metadata")
     getter = getter_polygon_from_key(sensoroperationalmode=sensoroperationalmode)
+    if verbose: log_print("Loading OK")
     
     key = key.lower()
     iw_datetime = datetime.strptime(key, '%Y%m%dt%H%M%S')
     iw_filename, polygon, orbit = getter(key)
     
+    if verbose: log_print("Search NEXRAD closest station")
     closest_station, closest_station_distance = get_closest_station()
+    if verbose: log_print(f"{closest_station} at {closest_station_distance:01} km")
     if closest_station_distance > 500 : return
     
+    if verbose: log_print('Retrieve urls')
     day_urls = get_nexrad_day_urls()
     hour_urls, closest_url = get_hour_urls()
     new_filenames = download_nexrad_data()
@@ -190,15 +192,17 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
         if verbose: log_print(f'Generating {i+1}/{len(new_filenames)} .png', f=r_print if i else print)
         new_filenames[i], m = ar2v_to_png(filename, polygon=polygon, m=m)
     if verbose: print()
+    
     if verbose: log_print('Generating .gif')
     os.makedirs('outputs/' + key, exist_ok=True)
     png_to_gif(new_filenames, f'outputs/{key}/{key}_NEXRAD.gif')
     
-    if verbose: log_print(f'Generate the reprojection')
+    if verbose: log_print('Reproject in .npz and .png')
     owiLat, owiLon = get_iw_latlon(polygon=polygon, metadata_filename=metadata_filename, shape=shape)
     if owiLat is not None:
-        new_filename = project_nexrad_on_iw_lat_lon()
-        if verbose: log_print(f'Done: {new_filename}')
+        new_filename = project_nexrad_on_iw_lat_lon(owiLat.shape)
+        if verbose: log_print('Done')
+    if verbose: print('Executed in', (datetime(1,1,1) + (datetime.now()-start)).strftime('%H hours, %M minutes, %S seconds'))
 
 if __name__ == "__main__":
     fire.Fire(maps_from_iw_key)
