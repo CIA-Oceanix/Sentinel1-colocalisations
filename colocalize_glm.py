@@ -3,12 +3,11 @@ import shutup; shutup.please()
 from datetime import datetime, timedelta 
 from matplotlib.patches import Polygon
 
-
-import cv2
-import glob
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+np.seterr(all="ignore")
+
 import os
 import PIL.Image
 import sys
@@ -24,7 +23,7 @@ os.makedirs('outputs', exist_ok=True)
 matplotlib.use('agg')
 
 from utils import get_distance, dms2dd, grid_from_polygon, getter_polygon_from_key, ini_map, png_to_gif
-from utils import log_print, r_print
+from utils import log_print, r_print, plot_polygon
 from requests_utils import download_file, routing
 from goes_utils import get_goes_hour_urls, get_close_urls, increased_grid
 
@@ -97,10 +96,7 @@ def maps_from_iw_key(key, delta_minutes=90, verbose=1, shape=None, metadata_file
         colormesh = m.pcolormesh(lon_grid, lat_grid, lightning_map, latlon=True, cmap="turbo", vmin=0, vmax=vmax, shading='auto')
         colorbar = plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')
         
-        if polygon is not None:
-            x, y = m(polygon[:,0], polygon[:,1])
-            plt.plot(x, y, color="black", linestyle='--')
-            plt.plot(x[[0,-1]], y[[0,-1]], color="black", linestyle='--')
+        plot_polygon(polygon, m)
         
         plt.suptitle(datetime.strptime(new_filename.split('_')[-3][1:-1], '%Y%j%H%M%S').strftime('%Y-%m-%d %H:%M:%S'))
         plt.title('Event accumulated energy [J]')

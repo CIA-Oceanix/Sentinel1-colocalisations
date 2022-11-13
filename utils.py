@@ -4,6 +4,7 @@ import PIL.Image
 import sys
 from zipfile import ZipFile
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 from mpl_toolkits.basemap import Basemap
 
@@ -135,3 +136,10 @@ def log_print(s, f=print, format='%Y-%m-%d %H:%M:%S'):
 
 def r_print(s):
     sys.stdout.write(f'\r{s}')
+
+
+def plot_polygon(polygon, m):
+    if polygon is not None:
+        x, y = m(polygon[:,0], polygon[:,1])
+        plt.plot(x, y, color="black", linestyle='--')
+        plt.plot(x[[0,-1]], y[[0,-1]], color="black", linestyle='--')

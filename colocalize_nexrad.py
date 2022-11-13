@@ -1,15 +1,14 @@
-# python colocalize_nexrad.py 20170108t015819
-
 import shutup; shutup.please()
 
 from datetime import datetime, timedelta 
 from matplotlib.patches import Polygon
 from urllib import request
 from xml.etree import ElementTree
-import glob
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+np.seterr(all="ignore")
+
 import os
 import PIL.Image
 import pyart
@@ -26,7 +25,7 @@ os.makedirs('outputs', exist_ok=True)
 matplotlib.use('agg')
 
 from utils import get_distance, dms2dd, grid_from_polygon, getter_polygon_from_key, ini_map, png_to_gif
-from utils import log_print, r_print, get_iw_latlon
+from utils import log_print, r_print, get_iw_latlon, plot_polygon
 
 def get_nexrad_stations():
     nexrad_stations = {}
@@ -56,10 +55,7 @@ def ar2v_to_png(filename, m=None, polygon=None, field_name='reflectivity'):
     colormesh = m.pcolormesh(lons, lats, data, latlon=True, cmap="turbo", vmin=0, vmax=40, shading='auto')
     colorbar = plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')
     
-    if polygon is not None:
-        x, y = m(polygon[:,0], polygon[:,1])
-        plt.plot(x, y, color="black", linestyle='--')
-        plt.plot(x[[0,-1]], y[[0,-1]], color="black", linestyle='--')
+    plot_polygon(polygon, m)
     
     plt.suptitle(filename)
     plt.title(field_name)
@@ -73,7 +69,7 @@ def ar2v_to_png(filename, m=None, polygon=None, field_name='reflectivity'):
     
     return new_filename, m
 
-def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_filename=None, sensoroperationalmode='IW'):
+def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_filename=None, sensoroperationalmode='IW', generate_gif=True):
     def get_closest_station():
         nexrad_stations = get_nexrad_stations()
         
@@ -125,15 +121,15 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
                         
         return hour_urls, closest_url
     
-    def download_nexrad_data():
-        new_filenames = [os.path.split(url)[1] for url in hour_urls]
+    def download_nexrad_data(urls):
+        new_filenames = [os.path.split(url)[1] for url in urls]
         for filename in os.listdir('.temp'): 
             if os.path.splitext(filename)[0] not in new_filenames:
                 os.remove(os.path.join('.temp', filename))
         
         new_filenames = []
-        for i, url in enumerate(hour_urls):
-            if verbose: log_print(f'Downloading {i+1}/{len(hour_urls)} files', f=r_print if i else print)
+        for i, url in enumerate(urls):
+            if verbose: log_print(f'Downloading {i+1}/{len(urls)} files', f=r_print if i else print)
             new_filename = f".temp/{os.path.split(url)[1]}.ar2v"
             new_filenames.append(new_filename)
             
@@ -185,23 +181,27 @@ def maps_from_iw_key(key, delta_minutes=30, verbose=1, shape=None, metadata_file
     if verbose: log_print('Retrieve urls')
     day_urls = get_nexrad_day_urls()
     hour_urls, closest_url = get_hour_urls()
-    new_filenames = download_nexrad_data()
+    new_filenames = download_nexrad_data([closest_url])
 
-    m = None
-    for i, filename in enumerate(new_filenames):
-        if verbose: log_print(f'Generating {i+1}/{len(new_filenames)} .png', f=r_print if i else print)
-        new_filenames[i], m = ar2v_to_png(filename, polygon=polygon, m=m)
-    if verbose: print()
-    
-    if verbose: log_print('Generating .gif')
     os.makedirs('outputs/' + key, exist_ok=True)
-    png_to_gif(new_filenames, f'outputs/{key}/{key}_NEXRAD.gif')
-    
     if verbose: log_print('Reproject in .npz and .png')
     owiLat, owiLon = get_iw_latlon(polygon=polygon, metadata_filename=metadata_filename, shape=shape)
     if owiLat is not None:
         new_filename = project_nexrad_on_iw_lat_lon(owiLat.shape)
-        if verbose: log_print('Done')
+        if verbose: log_print('Projection done')
+    else: log_print('Projection failed')
+
+    if generate_gif:
+        new_filenames = download_nexrad_data(hour_urls)
+        m = None
+        for i, filename in enumerate(new_filenames):
+            if verbose: log_print(f'Generating {i+1}/{len(new_filenames)} .png', f=r_print if i else print)
+            new_filenames[i], m = ar2v_to_png(filename, polygon=polygon, m=m)
+        if verbose: print()
+        
+        if verbose: log_print('Generating .gif')
+        png_to_gif(new_filenames, f'outputs/{key}/{key}_NEXRAD.gif')
+    
     if verbose: print('Executed in', (datetime(1,1,1) + (datetime.now()-start)).strftime('%H hours, %M minutes, %S seconds'))
 
 if __name__ == "__main__":

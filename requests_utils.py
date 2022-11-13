@@ -30,6 +30,7 @@ def request_stream(url, headers=HEADERS, retry=5):
 def download_file(url, folder=None):
     if folder is None:
         url, folder = url
+    os.makedirs(folder, exist_ok=True)
     filename = os.path.join(folder, os.path.split(url)[1])
     if os.path.exists(filename): return
     
