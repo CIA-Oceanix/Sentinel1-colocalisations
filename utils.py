@@ -61,10 +61,8 @@ def get_iw_latlon(polygon=None, metadata_filename=None, shape=None):
         return metadata['owiLat'], metadata['owiLon']
     else:
         if shape is None:
-            log_print('Unable to generate the reprojection. Missing either metadata or shape. Deduce from latlon at 200 m/px.')
             height = int(get_distance(polygon[0,1], polygon[0,0], polygon[1,1], polygon[1,0])*5)
             width = int(get_distance(polygon[0,1], polygon[0,0], polygon[-1,1], polygon[-1,0])*5)
-            log_print(f'Deduced shape: ({height}, {width})')
             return grid_from_polygon(polygon, (height, width))
         return grid_from_polygon(polygon, shape)
     
@@ -85,8 +83,6 @@ def getter_polygon_from_key(sensoroperationalmode='IW', polarisationmode='VV', v
 
                 key = filename.split('_')[4].lower()
                 products[key] = (filename, polygon, orbitdirection)
-                if not i and verbose: log_print(f"First {sensoroperationalmode}: {key}")
-    if verbose: log_print(f"Last {sensoroperationalmode}:  {key}")
     
     def get_polygon_from_key(key):
         return products[key]
