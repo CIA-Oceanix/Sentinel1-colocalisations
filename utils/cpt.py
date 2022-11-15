@@ -1,6 +1,8 @@
 import colorsys
 import numpy as np
 
+from matplotlib.colors import LinearSegmentedColormap 
+
 def loadCPT(colormap):
     try:
         f = open("colormap/" + colormap)
@@ -68,3 +70,5 @@ def loadCPT(colormap):
     colorDict = {'red': red, 'green': green, 'blue': blue}
 
     return colorDict
+
+cpt_cmap = LinearSegmentedColormap('cpt', loadCPT('IR4AVHRR6.cpt'))
