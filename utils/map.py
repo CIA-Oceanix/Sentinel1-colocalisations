@@ -47,12 +47,12 @@ def ini_map(lats, lons, zoom=4, stride=1):
     return m
 
 
-def plot_on_map(platform, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=None, polygon=None, suptitle=None):
+def plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=None, polygon=None, suptitle=None):
     if m is None:
         plt.figure(figsize=(12,12))
         m = ini_map(lat_grid, lon_grid)
         
-    cmap, vmin, vmax = platform_cmap_args(platform)
+    cmap, vmin, vmax = platform_cmap_args(platform, channel)
     
     colormesh = m.pcolormesh(platform_lon, platform_lat, data, latlon=True, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
     colorbar = plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')

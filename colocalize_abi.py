@@ -9,10 +9,10 @@ np.seterr(all="ignore")
 from datetime import datetime
 
 import matplotlib
-matplotlib.use('agg')
+#matplotlib.use('agg')
 
 
-shutil.rmtree('.temp', ignore_errors=True)
+#shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -44,15 +44,17 @@ def main(key=None, channel=None, shape=None, metadata_filename=None, sensoropera
         owi_lat, owi_lon = get_iw_latlon(polygon=iw_polygon, metadata_filename=metadata_filename, shape=shape)
 
         if verbose: log_print("Retrieve files urls")
-        platform, urls_per_platforms, (platform_lat, platform_lon, closest_file_data) = get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_step, platforms)
+        channel, platform, urls_per_platforms, (platform_lat, platform_lon, closest_file_data) = get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_step, platforms)
+        if verbose: log_print(f"{platform}, {channel}")
+
 
         if verbose: log_print("Project on S1 lat/lon grid")
         closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, owi_lat, owi_lon)
-        save_reprojection(platform, closest_file_data, f'outputs/{key}/{key}_{channel}')
+        save_reprojection(platform, channel,closest_file_data, f'outputs/{key}/{key}_{channel}')
 
         if gif:
-            if verbose: log_print("Generate .gif")
-            generate_gif(iw_polygon, channel, urls_per_platforms, f'outputs/{key}/{key}_{channel}.gif')
+            if verbose: log_print(".gif generation is asked")
+            generate_gif(iw_polygon, channel, urls_per_platforms, f'outputs/{key}/{key}_{channel}.gif', verbose)
     
     
 if __name__ == "__main__":

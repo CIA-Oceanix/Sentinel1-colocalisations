@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from utils.cpt import cpt_cmap
 
-from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS
+from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS, ABI_CHANNELS, RRQPEF_CHANNELS, NEXRAD_CHANNELS
 
 
 def log_print(s, f=print, format='%Y-%m-%d %H:%M:%S'):
@@ -13,12 +13,12 @@ def log_print(s, f=print, format='%Y-%m-%d %H:%M:%S'):
 def r_print(s):
     sys.stdout.write(f'\r{s}')
 
-def platform_cmap_args(platform):
-    if platform in SATELLITE_PLATFORMS:
+def platform_cmap_args(platform, channel):
+    if channel in ABI_CHANNELS:
         vmin=170
         vmax=378
         cmap=cpt_cmap
-    elif platform in NEXRAD_BASIS:
+    elif channel in NEXRAD_CHANNELS + RRQPEF_CHANNELS:
         vmin=0
         vmax=40
         cmap=plt.get_cmap('turbo')

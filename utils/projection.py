@@ -9,6 +9,7 @@ from utils.map import plot_on_map
 from utils.requests import download_files
 from utils.misc import platform_cmap_args
 from utils.read import read_from_files_per_platform
+from utils.misc import log_print
 
 from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS
 
@@ -54,11 +55,11 @@ def get_distance(source_latitude, source_longitude, target_latitude, target_long
     return d
 
 def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
-    def arg2d(array, f=np.argmin):
+    def arg2d(array, f=np.nanargmin):
         return  np.unravel_index(f(array), array.shape)
-    # Trim useless data to accelerate griddata
-    x1, y1 = arg2d(get_distance(platform_lat, platform_lon, owi_lat.max(), owi_lon.max()))
-    x2, y2 = arg2d(get_distance(platform_lat, platform_lon, owi_lat.min(), owi_lon.min()))
+        
+    x1, y1 = arg2d(get_distance(platform_lat, platform_lon, np.nanmax(owi_lat), np.nanmax(owi_lon)))
+    x2, y2 = arg2d(get_distance(platform_lat, platform_lon, np.nanmin(owi_lat), np.nanmin(owi_lon)))
     
     x1, x2 = min(x1, x2), max(x1, x2)
     y1, y2 = min(y1, y2), max(y1, y2)
@@ -72,16 +73,35 @@ def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
 def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     if platform in SATELLITE_PLATFORMS:
         data, platform_lat, platform_lon = trim(data, platform_lat, platform_lon, owi_lat, owi_lon)
-    
+
+    platform_lat[np.isnan(platform_lat)] = 0
+    platform_lon[np.isnan(platform_lon)] = 0
+    data[np.isnan(data)] = 0
+
     new_data = griddata(
         np.stack((platform_lat.flatten(), platform_lon.flatten()), axis=1),
         data.flatten(),
         np.stack((owi_lat.flatten(), owi_lon.flatten()), axis=1)
     ).reshape(owi_lat.shape).astype('float')
+    
+
+    """import matplotlib.pyplot as plt
+    plt.figure(figsize=(16,4))
+    plt.subplot(141)
+    plt.imshow(platform_lat)
+    plt.subplot(142)
+    plt.imshow(platform_lon)
+    plt.subplot(143)
+    plt.imshow(data)
+    plt.subplot(144)
+    plt.imshow(new_data)
+    plt.show()"""
+
+    
     return new_data
 
-def save_reprojection(platform, data, filename):
-    cmap, vmin, vmax = platform_cmap_args(platform)
+def save_reprojection(platform, channel, data, filename):
+    cmap, vmin, vmax = platform_cmap_args(platform, channel)
 
     new_data = np.clip((data-vmin)/(vmax-vmin), 0, 1)
     new_data = cmap(new_data)
@@ -124,7 +144,7 @@ def increased_grid(polygon, km_per_pixel=1, delta_factor=1):
 
     return grid_from_polygon(frame_polygon, (height, width))
     
-def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename):
+def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose):
     def png_to_gif(input_filenames, output_filename):
         imgs = (PIL.Image.open(filename) for filename in input_filenames)
         img = next(imgs)
@@ -134,6 +154,7 @@ def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename):
     filenames_per_platform = download_files(urls_per_platforms, closest=False)
     m = None
 
+    if verbose: log_print(f"Generate .png")
     for platform in filenames_per_platform:
         png_filenames = []
         for filenames in filenames_per_platform[platform]:
@@ -145,7 +166,7 @@ def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename):
             suptitle = datetime.strptime(os.path.split(folder)[1], '%Y%m%dt%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
             filename = folder + f".{channel}.png"
             
-            m = plot_on_map(platform, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=m, polygon=iw_polygon, suptitle=suptitle)
+            m = plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=m, polygon=iw_polygon, suptitle=suptitle)
             png_filenames.append(filename)
 
         png_to_gif(png_filenames, gif_filename)
