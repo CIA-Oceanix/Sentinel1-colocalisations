@@ -49,9 +49,8 @@ def get_download_args(key, polygon):
     geometry = f"POLYGON(({polygon[0,0]}+{polygon[0,1]}%2C{polygon[1,0]}+{polygon[1,1]}%2C{polygon[2,0]}+" \
                + f"{polygon[2,1]}%2C{polygon[3,0]}+{polygon[3,1]}%2C{polygon[0,0]}+{polygon[0,1]}))"
     url =  "https://finder.creodias.eu/resto/api/collections/Sentinel3/search.json?maxRecords=10&" \
-          + f"{startDate=}&{completionDate=}&instrument=OL&processingLevel=LEVEL2&productType=WFR&" \
-          + f"{geometry=}&sortParam=startDate&sortOrder=descending&status=all&dataset=ESA-DATASET"
-    url = url.replace("'", "")
+          + f"startDate={startDate}&completionDate={completionDate}&instrument=OL&processingLevel=LEVEL2&productType=WFR&" \
+          + f"geometry={geometry}&sortParam=startDate&sortOrder=descending&status=all&dataset=ESA-DATASET"
         
     r = requests.get(url)
     products = r.json()['features']
