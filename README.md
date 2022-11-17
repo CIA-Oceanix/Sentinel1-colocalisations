@@ -63,12 +63,12 @@ Be carefull that it need a logs.json with credentials.
 ! python process_s1.py {asf_username} {asf_password} "20170108t015819" NEXRAD
 ```
 
-![DL_NEXRAD.png](readme/20170108t015819.png)
+![20170108t015819.png](readme/20170108t015819.png)
 ![DL_NEXRAD.png](readme/DL_NEXRAD.png)
 
 ```
 ! python process_s1.py {asf_username} {asf_password} "20180117t180947" BiologicalSlicks
 ```
 
-![DL_NEXRAD.png](readme/20180117t180947.png)
+![20180117t180947.png](readme/20180117t180947.png)
 ![DL_BiologicalSlicks.png](readme/DL_BiologicalSlicks.png)
