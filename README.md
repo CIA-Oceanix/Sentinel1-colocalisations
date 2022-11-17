@@ -7,6 +7,7 @@ Link to notebooks presenting colocations with Sentinel-1:
 - [GOES16/17/18 & Himawari 8/9 RRQPEF L2](readme/readme_rrqpe.ipynb)
 - [GOES16/17/28 GLM L2 Events](readme/readme_glm.ipynb)
 - [Sentinel3 A/B OLCI](readme/readme_s3.ipynb)
+- [Sentinel1 Rain & Biological Slicks](readme/readme_dl.ipynb)
 
 These notebooks have been generated on Google Colab.
 
