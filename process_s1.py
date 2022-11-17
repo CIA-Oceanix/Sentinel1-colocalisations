@@ -60,7 +60,7 @@ def main(asf_username, asf_password, key, model, verbose=1):
     if verbose: log_print("Run the models")
     deep_learning_outputs = apply_on_keys(tiff_filenames, getter, model)
     for filename in tiff_filenames:
-        key = os.path.split(tiff_filename)[1].split('-')[4]
+        key = os.path.split(filename)[1].split('-')[4]
         new_filename = f"outputs/{key}.tiff"
         shutil.copyfile(filename, new_filename)
 
