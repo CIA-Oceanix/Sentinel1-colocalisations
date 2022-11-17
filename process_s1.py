@@ -14,7 +14,7 @@ from utils.rt import safe_to_tiff
 from utils.deep_learning import apply_on_keys
 from utils.sentinel1 import getter_polygon_from_key
 
-shutil.rmtree('.temp', ignore_errors=True)
+#shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -59,6 +59,10 @@ def main(asf_username, asf_password, key, model, verbose=1):
 
     if verbose: log_print("Run the models")
     deep_learning_outputs = apply_on_keys(tiff_filenames, getter, model)
+    for filename in tiff_filenames:
+        key = os.path.split(tiff_filename)[1].split('-')[4]
+        new_filename = f"outputs/{key}.tiff"
+        shutil.copyfile(filename, new_filename)
 
     if verbose: log_print("Done")
 

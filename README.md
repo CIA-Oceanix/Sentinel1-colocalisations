@@ -64,5 +64,5 @@ Be carefull that it need a logs.json with credentials.
 ! python process_s1.py {asf_username} {asf_password} "20180117t180947" BiologicalSlicks
 ```
 
-![DL_NEXRAD.png](readme/20170108t015819/DL_NEXRAD.png)
-![DL_BiologicalSlicks.png](readme/20180117t180947/DL_BiologicalSlicks.png)
+![DL_NEXRAD.png](readme/DL_NEXRAD.png)
+![DL_BiologicalSlicks.png](readme/DL_BiologicalSlicks.png)
