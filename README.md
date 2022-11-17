@@ -1,9 +1,68 @@
+# Notebooks
+
 Link to notebooks presenting colocations with Sentinel-1:
 
-- [colocation with NEXRAD L2](readme/readme_nexrad.ipynb)
-- [GOES16/17/18 & Himawari 8/9 ABI L2](readme/readme_goes_abi.ipynb)
-- [GOES16/17/18 & Himawari 8/9 RRQPEF L2]()
-- [Sentinel3 A/B OLCI]()
-- [colocation with GOES GLM L2 Events](readme/readme_glm.ipynb)
+- [NEXRAD L2 Reflectivity](readme/readme_nexrad.ipynb)
+- [GOES16/17/18 & Himawari 8/9 ABI L2](readme/readme_abi.ipynb)
+- [GOES16/17/18 & Himawari 8/9 RRQPEF L2](readme/readme_rrqpe.ipynb)
+- [GOES16/17/28 GLM L2 Events](readme/readme_glm.ipynb)
+- [Sentinel3 A/B OLCI](readme/readme_s3.ipynb)
 
 These notebooks have been generated on Google Colab.
+
+# Examples
+
+Here the list of the commands used in these notebooks:
+
+## NEXRAD L2 Reflectivity
+```
+python colocalize.py    20170108t015819 --platform_key nexrad --gif True
+```
+
+![20170108t015819_KVTX.gif](readme/20170108t015819_KVTX.gif)
+
+## GOES16/17/18 & Himawari 8/9 ABI L2
+
+```
+python colocalize.py    20210913t092920 --platform_key abi --channel C14 --gif True
+```
+
+![20210913t092920_C14.gif](readme/20210913t092920_C14.gif)
+
+
+## GOES16/17/18 & Himawari 8/9 RRQPEF L2
+
+```
+python colocalize.py    20210913t092920 --platform_key rrqpef --gif True
+```
+
+![20200827t000933_RRQPEF.gif](readme/20200827t000933_RRQPEF.gif)
+
+
+## GOES16/17/28 GLM L2 Events
+
+```
+python colocalize.py    20200827t000933 --platform_key glm --gif True
+```
+
+![20200827t000933_GLM.gif](readme/20200827t000933_GLM.gif)
+
+## Sentinel3 A/B OLCI
+
+```
+python colocalize_s3.py 20180117T180947
+```
+
+![20180117T102322.gif](readme/20180117T102322.png)
+
+Be carefull that it need a logs.json with credentials.
+
+## Sentinel1 Deep Learning Models
+
+```
+! python process_s1.py {asf_username} {asf_password} "20170108t015819" NEXRAD
+! python process_s1.py {asf_username} {asf_password} "20180117t180947" BiologicalSlicks
+```
+
+![DL_NEXRAD.png](readme/20170108t015819/DL_NEXRAD.png)
+![DL_BiologicalSlicks.png](readme/20180117t180947/DL_BiologicalSlicks.png)

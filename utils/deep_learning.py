@@ -73,7 +73,7 @@ def apply_on_keys(filenames, getter, model_key):
         key = os.path.split(tiff_filename)[1].split('-')[4]
         output_filename = f"outputs/{key}/DL_{model_key}.png"
 
-        output = apply_model(tiff_filename)
+        output = apply_model(tiff_filename, progress_bar=False)
         
         if output.shape[2] == 1:  output = output[:,:,[0,0,0,0]]
         if output.shape[2] == 3:  output = output[:,:,[0,1,2,0]]

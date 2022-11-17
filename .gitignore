@@ -2,3 +2,5 @@
 outputs
 .ipynb_checkpoints
 __pycache__
+logs.json
+test/*
