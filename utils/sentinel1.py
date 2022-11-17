@@ -1,7 +1,7 @@
 from zipfile import ZipFile
 import numpy as np
 
-from utils.projection import get_distance, grid_from_polygon
+from utils.map import get_distance, grid_from_polygon
 
 
 def get_iw_latlon(polygon=None, metadata_filename=None, shape=None):

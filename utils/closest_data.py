@@ -13,20 +13,25 @@ from utils.read import read_from_files_per_platform
 from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS, ABI_CHANNELS, RRQPEF_CHANNELS, NEXRAD_CHANNELS, GLM_CHANNELS
 
 def get_bucket_url(platform, channel, date):
-    url = f"https://noaa-{platform}.s3.amazonaws.com/?prefix="
+    url_basis = f"https://noaa-{platform}.s3.amazonaws.com/?prefix="
     if platform in HIMAWARI_SERIE:
+        date_string = f"{date.year}/{date.strftime('%m')}/{date.day}/{date.hour:02}{int(date.minute/10)}0"
         if channel in ABI_CHANNELS:
-            url += f"AHI-L2-FLDK-ISatSS/{date.year}/{date.strftime('%m')}/{date.day}/{date.hour:02}{int(date.minute/10)}0/OR_HFD-020-B12-M1{channel}"
+            prefix = f"AHI-L2-FLDK-ISatSS/{date_string}/OR_HFD-020-B12-M1{channel}"
         elif channel in RRQPEF_CHANNELS:
-            url += f"AHI-L2-FLDK-RainfallRate/{date.year}/{date.strftime('%m')}/{date.day}/{date.hour:02}{int(date.minute/10)}0"
+            prefix = f"AHI-L2-FLDK-RainfallRate/{date_string}"
     elif platform in GOES_SERIE:
+        date_string = f"{date.year}/{date.strftime('%j')}/{date.hour:02}"
         if channel in ABI_CHANNELS:
-            url += f"ABI-L2-MCMIPF/{date.year}/{date.strftime('%j')}/{date.hour:02}"
+            prefix = f"ABI-L2-MCMIPF/{date_string}"
         elif channel in RRQPEF_CHANNELS:
-            url += f"ABI-L2-RRQPEF/{date.year}/{date.strftime('%j')}/{date.hour:02}"
+            prefix = f"ABI-L2-RRQPEF/{date_string}"
+        elif channel in GLM_CHANNELS:
+            prefix = f"GLM-L2-LCFA/{date_string}"
+            
     elif platform in NEXRAD_BASIS:
-        url += f"{date.year}/{date.month:02}/{date.day:02}/{channel}"
-    return url
+        prefix = f"{date.year}/{date.month:02}/{date.day:02}/{channel}"
+    return url_basis + prefix
 
 
 def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step, platforms):
@@ -67,20 +72,22 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step):
             smallest_timedelta = None
             closest_urls = {}
             for i_url, url in enumerate(urls):
-                if platform in HIMAWARI_SERIE and channel in RRQPEF_CHANNELS:
-                    date_string = url.split('_')[-2][1:-1]
-                    url_datetime = datetime.strptime(date_string, '%Y%m%d%H%M%S')
-                elif platform in GOES_SERIE and channel in RRQPEF_CHANNELS:
-                    date_string = url.split('_')[-3][1:-1]
-                    url_datetime = datetime.strptime(date_string, '%Y%j%H%M%S')
-                elif platform in SATELLITE_PLATFORMS and channel in ABI_CHANNELS + GLM_CHANNELS:
-                    date_string = url.split('_')[-2][1:-1]
-                    url_datetime = datetime.strptime(date_string, '%Y%j%H%M%S')
-                elif platform in NEXRAD_BASIS:
-                    if not url.endswith('_V06'): continue
-                    date_string = os.path.split(url)[1][4:-4]
-                    url_datetime = datetime.strptime(date_string, '%Y%m%d_%H%M%S')
-                    
+                try:
+                    if platform in HIMAWARI_SERIE and channel in RRQPEF_CHANNELS:
+                        date_string = url.split('_')[-2][1:-1]
+                        url_datetime = datetime.strptime(date_string, '%Y%m%d%H%M%S')
+                    elif platform in GOES_SERIE and channel in RRQPEF_CHANNELS:
+                        date_string = url.split('_')[-3][1:-1]
+                        url_datetime = datetime.strptime(date_string, '%Y%j%H%M%S')
+                    elif platform in SATELLITE_PLATFORMS and channel in ABI_CHANNELS + GLM_CHANNELS:
+                        date_string = url.split('_')[-2][1:-1]
+                        url_datetime = datetime.strptime(date_string, '%Y%j%H%M%S')
+                    elif platform in NEXRAD_BASIS:
+                        if not url.endswith('_V06'): continue
+                        date_string = os.path.split(url)[1][4:-4]
+                        url_datetime = datetime.strptime(date_string, '%Y%m%d_%H%M%S')
+                except ValueError: continue  # it means that some unsupported file was in the list
+                        
                 current_timedelta = abs(url_datetime - date)
                 if current_timedelta < time_step:
                     closest_urls[current_timedelta] = closest_urls.get(current_timedelta, []) + [url_base + url]
@@ -102,14 +109,14 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step):
 def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel):
     mean_iw_lat = np.mean(iw_polygon[:,1])
     mean_iw_lon = np.mean(iw_polygon[:,0])
-            
+ 
     closest_platform = None
 
     res = {}
     for platform, filenames in closest_filenames_per_platform.items():
         platform_lat, platform_lon, data = read_from_files_per_platform(filenames, platform, channel)
         res[platform] = platform_lat, platform_lon, data
-            
+
         mean_platform_lat = np.nanmean(platform_lat)
         mean_platform_lon = np.nanmean(platform_lon)
 
@@ -138,7 +145,7 @@ def get_closest_nexrad_station(polygon):
                 
                 lat = dms2dd(lat[:2], lat[2:4], lat[4:6], 'N')
                 lon = dms2dd(lon[1:4], lon[4:6], lon[6:8], 'W')
-                        
+                
                 nexrad_stations[station_id] = {"lat": lat, "lon": lon}
         return nexrad_stations
     

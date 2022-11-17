@@ -1,5 +1,4 @@
 import os
-import utm
 import PIL.Image
 import numpy as np
 from datetime import datetime
@@ -10,49 +9,11 @@ from utils.requests import download_files
 from utils.misc import platform_cmap_args
 from utils.read import read_from_files_per_platform
 from utils.misc import log_print
+from utils.map import grid_from_polygon, get_distance
 
 from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS
 
-def grid_from_polygon(polygon, shape):
-    utm_easting, utm_northing, ZONE_NUMBER, ZONE_LETTER = utm.from_latlon(polygon[:,1], polygon[:,0])
-    utm_polygon = np.stack((utm_easting, utm_northing), axis=1)
-    
-    easting_grid = np.zeros(shape)
-    northing_grid = np.zeros(shape)
-    
-    v1 = utm_polygon[1]
-    v2 = utm_polygon[2]
-    easting_grid[0] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
-    northing_grid[0] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
-    
-    v1 = utm_polygon[0]
-    v2 = utm_polygon[3]
-    easting_grid[-1] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
-    northing_grid[-1] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
-    for i in range(easting_grid.shape[1]):
-        v1 = easting_grid[0,i]
-        v2 = easting_grid[-1,i]
-        easting_grid[:, i] = np.arange(v1, v2, (v2-v1)/easting_grid.shape[0])[:easting_grid.shape[0]]
-        
-        v1 = northing_grid[0,i]
-        v2 = northing_grid[-1,i]
-        northing_grid[:, i] = np.arange(v1, v2, (v2-v1)/northing_grid.shape[0])[:northing_grid.shape[0]]
- 
-    lat_grid, lon_grid = utm.to_latlon(northing_grid, easting_grid, ZONE_NUMBER, ZONE_LETTER, strict=False)
-    return lat_grid, lon_grid
 
-    
-def get_distance(source_latitude, source_longitude, target_latitude, target_longitude):
-    EARTH_RADIUS = 6371
-
-    d_lat = np.radians(target_latitude - source_latitude)
-    d_lon = np.radians(target_longitude - source_longitude)
-    a = (np.sin(d_lat / 2.) * np.sin(d_lat / 2.) +
-         np.cos(np.radians(source_latitude)) * np.cos(np.radians(target_latitude)) *
-         np.sin(d_lon / 2.) * np.sin(d_lon / 2.))
-    c = 2. * np.arctan2(np.sqrt(a), np.sqrt(1. - a))
-    d = EARTH_RADIUS * c
-    return d
 
 def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
     def arg2d(array, f=np.nanargmin):
@@ -73,35 +34,22 @@ def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
 def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     if platform in SATELLITE_PLATFORMS:
         data, platform_lat, platform_lon = trim(data, platform_lat, platform_lon, owi_lat, owi_lon)
-
+        
     platform_lat[np.isnan(platform_lat)] = 0
     platform_lon[np.isnan(platform_lon)] = 0
     data[np.isnan(data)] = 0
-
+    
     new_data = griddata(
         np.stack((platform_lat.flatten(), platform_lon.flatten()), axis=1),
         data.flatten(),
         np.stack((owi_lat.flatten(), owi_lon.flatten()), axis=1)
     ).reshape(owi_lat.shape).astype('float')
-    
-
-    """import matplotlib.pyplot as plt
-    plt.figure(figsize=(16,4))
-    plt.subplot(141)
-    plt.imshow(platform_lat)
-    plt.subplot(142)
-    plt.imshow(platform_lon)
-    plt.subplot(143)
-    plt.imshow(data)
-    plt.subplot(144)
-    plt.imshow(new_data)
-    plt.show()"""
-
-    
     return new_data
 
 def save_reprojection(platform, channel, data, filename):
     cmap, vmin, vmax = platform_cmap_args(platform, channel)
+    vmin = np.nanmin(data) if vmin is None else vmin
+    vmax = np.nanmax(data) if vmax is None else vmax
 
     new_data = np.clip((data-vmin)/(vmax-vmin), 0, 1)
     new_data = cmap(new_data)

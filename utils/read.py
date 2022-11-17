@@ -1,28 +1,30 @@
 import numpy as np
 from netCDF4 import Dataset
 
+from utils.map import grid_from_polygon
+
 from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, ABI_CHANNELS, RRQPEF_CHANNELS, GLM_CHANNELS
 
 
 def accumulate_lightning_maps(filenames):
     lat_grid = None
-    
-    data = np.zeros(lat_grid.shape)
-
     for filename in filenames:
         with Dataset(filename) as dataset:
             event_lat = dataset['event_lat'][:]
             event_lon = dataset['event_lon'][:]
-            event_energy = dataset['event_energy']
-            event_energy = (event_energy[:]*event_energy.scale_factor) + event_energy.add_offset
-
+            # event_energy = dataset['event_energy']
+            # event_energy = (event_energy[:]*event_energy.scale_factor) + event_energy.add_offset
             if lat_grid is None:
-                min_lat, max_lat = dataset['lat_field_of_view_bounds']
-                min_lon, max_lon = dataset['lon_field_of_view_bounds']
-                shape = ((max_lat-min_lat)//10, (max_lon-min_lon)//10)
-                polygon = [[min_lat, min_lon], [max_lat, min_lon], [max_lat, max_lon], [min_lat, max_lat]]
-                lat_grid, lon_grid = grid_from_polygon(polygon, shape)
-                print(f"{lat_grid.max()=}, {lat_grid.max()=}, {lon_grid.min()=}, {lon_grid.max()=}")
+                min_lat = dataset['lat_field_of_view_bounds'][:].min()
+                max_lat = dataset['lat_field_of_view_bounds'][:].max()
+                min_lon = dataset['lon_field_of_view_bounds'][:].min()
+                max_lon = dataset['lon_field_of_view_bounds'][:].max()
+                
+                lats = np.arange(min_lat, max_lat, 0.1)
+                lons = np.arange(min_lon, max_lon, 0.1)
+
+                lat_grid, lon_grid = np.meshgrid(lats, lons)
+                data = np.zeros(lat_grid.shape)
 
         validity = np.logical_and(
             np.logical_and(min_lat < event_lat, event_lat < max_lat),
@@ -31,13 +33,11 @@ def accumulate_lightning_maps(filenames):
         
         event_lat = event_lat[validity]
         event_lon = event_lon[validity]
-        event_energy = event_energy[validity]
+        #event_energy = event_energy[validity]
         
         event_lat = ((event_lat - min_lat)/(max_lat - min_lat)*data.shape[1]).astype(int)
         event_lon = ((event_lon - min_lon)/(max_lon - min_lon)*data.shape[0]).astype(int)
-        np.add.at(data, (event_lon, event_lat), event_energy)
-        
-    data[data==0] = np.nan
+        np.add.at(data, (event_lon, event_lat), 1)
     return data, lat_grid, lon_grid
 
     
@@ -93,16 +93,15 @@ def read_from_files_per_platform(filenames, platform, channel):
                     platform_lon = dataset['Longitude'][:]
                     
         return platform_lat, platform_lon, data
-
+        
     if platform in GOES_SERIE:
         if channel in GLM_CHANNELS:
-            data, lat_grid, lon_grid = accumulate_lightning_maps(filenames)
+            data, platform_lat, platform_lon = accumulate_lightning_maps(filenames)
         else:
             platform_lat, platform_lon, data = latlon_from_file(filenames[0], platform, channel)
             platform_lat = platform_lat.filled(np.nan)
             platform_lon = platform_lon.filled(np.nan)
             data = data.filled(np.nan)
-
     elif platform in HIMAWARI_SERIE:
         if channel in ABI_CHANNELS:
             n = 550  # size of each tile
@@ -127,17 +126,6 @@ def read_from_files_per_platform(filenames, platform, channel):
                 data[n*x:n*(x+1), n*y:n*(y+1)] = tile_data
         elif channel in RRQPEF_CHANNELS:
             platform_lat, platform_lon, data = latlon_from_file(filenames[0], platform, channel)
-
-            """import matplotlib.pyplot as plt
-            plt.figure(figsize=(12,4))
-            plt.subplot(131)
-            plt.imshow(platform_lat)
-            plt.subplot(132)
-            plt.imshow(platform_lon)
-            plt.subplot(133)
-            plt.imshow(data)
-            plt.show()"""
-
     elif platform in NEXRAD_BASIS:
         import pyart # /!\ Import here because this is a special library
         assert len(filenames) == 1
@@ -146,5 +134,5 @@ def read_from_files_per_platform(filenames, platform, channel):
         
         platform_lat, platform_lon, alts = radar.get_gate_lat_lon_alt(sweep=0)
         data = radar.get_field(sweep=0, field_name='reflectivity').astype('float')
-        
+
     return platform_lat, platform_lon, data

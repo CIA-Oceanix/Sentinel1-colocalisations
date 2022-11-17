@@ -30,9 +30,13 @@ def request_stream(url, headers=HEADERS, retry=5):
 def download_file(url, folder=None):
     if folder is None:
         url, folder = url
-    os.makedirs(folder, exist_ok=True)
-    filename = os.path.join(folder, os.path.split(url)[1])
-    if os.path.exists(filename): return
+
+    if folder.endswith('.zip'):
+        filename = folder
+    else:
+        filename = os.path.join(folder, os.path.split(url)[1])
+    if os.path.exists(filename): return filename
+    os.makedirs(os.path.split(filename)[0], exist_ok=True)
     
     raw = request_stream(url)
     with open(filename, 'wb') as file:
@@ -40,7 +44,7 @@ def download_file(url, folder=None):
     return filename
 
 
-def routing(args, thread_limit=10, single_wait=0, verbose=1, time_limit=600, time_sleep=10):
+def routing(args, thread_limit=10, single_wait=0, verbose=1, time_limit=3600, time_sleep=10):
     thread_limit += threading.active_count()
     begin = datetime.now()
     

@@ -1,3 +1,5 @@
+import os
+import utm
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -5,7 +7,48 @@ from mpl_toolkits.basemap import Basemap
 
 from utils.misc import platform_cmap_args
 
+    
+def get_distance(source_latitude, source_longitude, target_latitude, target_longitude):
+    EARTH_RADIUS = 6371
 
+    d_lat = np.radians(target_latitude - source_latitude)
+    d_lon = np.radians(target_longitude - source_longitude)
+    a = (np.sin(d_lat / 2.) * np.sin(d_lat / 2.) +
+         np.cos(np.radians(source_latitude)) * np.cos(np.radians(target_latitude)) *
+         np.sin(d_lon / 2.) * np.sin(d_lon / 2.))
+    c = 2. * np.arctan2(np.sqrt(a), np.sqrt(1. - a))
+    d = EARTH_RADIUS * c
+    return d
+
+def grid_from_polygon(polygon, shape):
+    utm_easting, utm_northing, ZONE_NUMBER, ZONE_LETTER = utm.from_latlon(polygon[:,1], polygon[:,0])
+    utm_polygon = np.stack((utm_easting, utm_northing), axis=1)
+    
+    easting_grid = np.zeros(shape)
+    northing_grid = np.zeros(shape)
+    
+    v1 = utm_polygon[1]
+    v2 = utm_polygon[2]
+    easting_grid[0] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
+    northing_grid[0] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
+    
+    v1 = utm_polygon[0]
+    v2 = utm_polygon[3]
+    easting_grid[-1] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
+    northing_grid[-1] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
+    for i in range(easting_grid.shape[1]):
+        v1 = easting_grid[0,i]
+        v2 = easting_grid[-1,i]
+        easting_grid[:, i] = np.arange(v1, v2, (v2-v1)/easting_grid.shape[0])[:easting_grid.shape[0]]
+        
+        v1 = northing_grid[0,i]
+        v2 = northing_grid[-1,i]
+        northing_grid[:, i] = np.arange(v1, v2, (v2-v1)/northing_grid.shape[0])[:northing_grid.shape[0]]
+ 
+    lat_grid, lon_grid = utm.to_latlon(northing_grid, easting_grid, ZONE_NUMBER, ZONE_LETTER, strict=False)
+    return lat_grid, lon_grid
+
+    
 def plot_polygon(polygon, m):
     if polygon is not None:
         x, y = m(polygon[:,0], polygon[:,1])
@@ -62,6 +105,7 @@ def plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, l
     if suptitle is not None:
         plt.suptitle(suptitle)
     plt.tight_layout()
+    os.makedirs(os.path.split(filename)[0], exist_ok=True)
     plt.savefig(filename)
 
     colorbar.remove()
