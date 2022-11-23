@@ -47,7 +47,6 @@ def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     return new_data
 
 def save_reprojection(platform, channel, data, filename):
-    print(f"{platform=} {channel=}")
     kwargs = platform_cmap_args(platform, channel)[0]
     vmin = kwargs.get("vmin", np.nanmin(data))
     vmax = kwargs.get("vmax", np.nanmax(data))
