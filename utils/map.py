@@ -95,10 +95,11 @@ def plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, l
         plt.figure(figsize=(12,12))
         m = ini_map(lat_grid, lon_grid)
         
-    cmap, vmin, vmax = platform_cmap_args(platform, channel)
+    kwargs, norm, colorbar_postprocess = platform_cmap_args(platform, channel)
+    colormesh = m.pcolormesh(platform_lon, platform_lat, data, norm=norm, latlon=True, shading='auto', **kwargs)
     
-    colormesh = m.pcolormesh(platform_lon, platform_lat, data, latlon=True, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
     colorbar = plt.colorbar(fraction=0.046, pad=0.04, orientation='horizontal')
+    if colorbar_postprocess is not None: colorbar_postprocess(colorbar)
 
     plot_polygon(polygon, m)
 

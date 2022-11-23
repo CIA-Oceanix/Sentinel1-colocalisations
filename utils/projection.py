@@ -47,12 +47,13 @@ def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     return new_data
 
 def save_reprojection(platform, channel, data, filename):
-    cmap, vmin, vmax = platform_cmap_args(platform, channel)
-    vmin = np.nanmin(data) if vmin is None else vmin
-    vmax = np.nanmax(data) if vmax is None else vmax
+    print(f"{platform=} {channel=}")
+    kwargs = platform_cmap_args(platform, channel)[0]
+    vmin = kwargs.get("vmin", np.nanmin(data))
+    vmax = kwargs.get("vmax", np.nanmax(data))
 
     new_data = np.clip((data-vmin)/(vmax-vmin), 0, 1)
-    new_data = cmap(new_data)
+    new_data = kwargs["cmap"](new_data)
     new_data = (new_data * 255).astype(np.uint8)
 
     os.makedirs(os.path.split(filename)[0], exist_ok=True)
@@ -92,27 +93,30 @@ def increased_grid(polygon, km_per_pixel=1, delta_factor=1):
 
     return grid_from_polygon(frame_polygon, (height, width))
     
-def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose):
+def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose, read_function, download=True):
     def png_to_gif(input_filenames, output_filename):
         imgs = (PIL.Image.open(filename) for filename in input_filenames)
         img = next(imgs)
+
+        os.makedirs(os.path.split(output_filename)[0], exist_ok=True)
         img.save(fp=output_filename, format='GIF', append_images=imgs, save_all=True, duration=200, loop=0)
         
     lat_grid, lon_grid = increased_grid(iw_polygon, km_per_pixel=2, delta_factor=2)
-    filenames_per_platform = download_files(urls_per_platforms, closest=False)
+    filenames_per_platform = download_files(urls_per_platforms, closest=False) if download else urls_per_platforms
     m = None
 
     if verbose: log_print(f"Generate .png")
     for platform in filenames_per_platform:
         png_filenames = []
-        for filenames in filenames_per_platform[platform]:
-            platform_lat, platform_lon, data = read_from_files_per_platform(filenames, platform, channel)
+        for date, filenames in filenames_per_platform[platform].items():
+            platform_lat, platform_lon, data = read_function(filenames, platform, channel)
             if platform in SATELLITE_PLATFORMS:
                 data, platform_lat, platform_lon = trim(data, platform_lat, platform_lon, lat_grid, lon_grid)
 
             folder = os.path.split(filenames[0])[0]
-            suptitle = datetime.strptime(os.path.split(folder)[1], '%Y%m%dt%H%M%S').strftime('%Y-%m-%d %H:%M:%S')
-            filename = folder + f".{channel}.png"
+            suptitle = date.strftime('%Y-%m-%d %H:%M:%S')
+            datestr = date.strftime('%Y%m%dt%H%M%S')
+            filename = folder + f".{datestr}.{channel}.png"
             
             m = plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=m, polygon=iw_polygon, suptitle=suptitle)
             png_filenames.append(filename)

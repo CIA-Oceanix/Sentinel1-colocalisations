@@ -1,7 +1,7 @@
 import colorsys
 import numpy as np
 
-from matplotlib.colors import LinearSegmentedColormap 
+import matplotlib as mpl
 
 def loadCPT(colormap):
     try:
@@ -71,4 +71,59 @@ def loadCPT(colormap):
 
     return colorDict
 
-cpt_cmap = LinearSegmentedColormap('cpt', loadCPT('IR4AVHRR6.cpt'))
+cpt_cmap = mpl.colors.LinearSegmentedColormap('cpt', loadCPT('IR4AVHRR6.cpt'))
+
+
+def getHHC_cmap():
+    cmaplist = np.array([
+        (0, 0, 0),
+        (38,11, 104),
+        (64,38,141),
+        (145,0,0),
+        (255,0,0),
+        (161,76,198),
+        (255,0,255),
+        (255,200,0),
+        (255,255,0),
+        (0,100,0),
+        (0,255,0),
+        (0,235,235),
+        (0,0,255),
+        (100,110,100),
+        (150,150,150),
+    ])/255
+
+    labels = [
+        'Giant Hall', 'Large Hall', 'Hall', 'Heavy Rain', 'Rain', 'Big Drops', 'Freezing Rain', 'FR/IP',
+        'Ice Piellets', 'Graupel', 'Wet Snow', 'Dry Snow', 'Crystals', 'Birds/Insects', 'Ground Clutter']
+    cmap = mpl.colors.LinearSegmentedColormap.from_list('Hydrometeor Classes', cmaplist, 15)
+    return cmap, labels
+
+def getDPR_cmap():
+    # https://unidata.github.io/python-gallery/examples/Precipitation_Map.html
+    clevs = [0, 1, 2.5, 5, 7.5, 10, 15, 20, 30, 40, 50, 70, 100, 150, 200, 250, 300, 400, 500, 600, 750]
+         
+    cmap_data = [(1.0, 1.0, 1.0),
+                 (0.3137255012989044, 0.8156862854957581, 0.8156862854957581),
+                 (0.0, 1.0, 1.0),
+                 (0.0, 0.8784313797950745, 0.501960813999176),
+                 (0.0, 0.7529411911964417, 0.0),
+                 (0.501960813999176, 0.8784313797950745, 0.0),
+                 (1.0, 1.0, 0.0),
+                 (1.0, 0.6274510025978088, 0.0),
+                 (1.0, 0.0, 0.0),
+                 (1.0, 0.125490203499794, 0.501960813999176),
+                 (0.9411764740943909, 0.250980406999588, 1.0),
+                 (0.501960813999176, 0.125490203499794, 1.0),
+                 (0.250980406999588, 0.250980406999588, 1.0),
+                 (0.125490203499794, 0.125490203499794, 0.501960813999176),
+                 (0.125490203499794, 0.125490203499794, 0.125490203499794),
+                 (0.501960813999176, 0.501960813999176, 0.501960813999176),
+                 (0.8784313797950745, 0.8784313797950745, 0.8784313797950745),
+                 (0.9333333373069763, 0.8313725590705872, 0.7372549176216125),
+                 (0.8549019694328308, 0.6509804129600525, 0.47058823704719543),
+                 (0.6274510025978088, 0.42352941632270813, 0.23529411852359772),
+                 (0.4000000059604645, 0.20000000298023224, 0.0)]
+    cmap = mpl.colors.ListedColormap(cmap_data, 'Rain Rate')
+    norm = mpl.colors.BoundaryNorm(clevs, cmap.N)
+    return cmap, norm

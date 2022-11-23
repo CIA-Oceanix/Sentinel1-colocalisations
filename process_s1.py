@@ -14,7 +14,7 @@ from utils.rt import safe_to_tiff
 from utils.deep_learning import apply_on_keys
 from utils.sentinel1 import getter_polygon_from_key
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 

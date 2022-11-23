@@ -93,7 +93,8 @@ def read_from_files_per_platform(filenames, platform, channel):
                     platform_lon = dataset['Longitude'][:]
                     
         return platform_lat, platform_lon, data
-        
+
+    if isinstance(filenames, dict):  filenames = list(filenames.values())[0]
     if platform in GOES_SERIE:
         if channel in GLM_CHANNELS:
             data, platform_lat, platform_lon = accumulate_lightning_maps(filenames)

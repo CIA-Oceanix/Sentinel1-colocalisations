@@ -127,7 +127,7 @@ def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel):
     return closest_platform, res[closest_platform]
 
 
-def get_closest_nexrad_station(polygon):
+def get_closest_nexrad_station(polygon, blacklist=[]):
     def get_nexrad_stations():
         def dms2dd(degrees, minutes, seconds, direction):
             dd = float(degrees) + float(minutes)/60 + float(seconds)/(60*60);
@@ -141,6 +141,7 @@ def get_closest_nexrad_station(polygon):
                 line = line.split('\t')
                     
                 station_id = line[1]
+                if station_id in blacklist: continue
                 lat, lon = line[3].split('/')
                 
                 lat = dms2dd(lat[:2], lat[2:4], lat[4:6], 'N')
@@ -171,7 +172,10 @@ def get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_
     urls_per_platforms = get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step)
 
     closest_filenames_per_platform = download_files(urls_per_platforms, closest=True)
-    closest_filenames_per_platform = {key: value[0] for key, value in closest_filenames_per_platform.items()}
+    
+    for plaftorm, datedic in closest_filenames_per_platform.items():
+        closest_date = sorted([(abs(iw_datetime - date), date) for date in datedic])[0][1]
+        closest_filenames_per_platform[plaftorm] = {closest_date: datedic[closest_date]}
 
     closest_platform, (platform_lat, platform_lon, data) = get_closest_platform(closest_filenames_per_platform, iw_polygon, channel)
     urls_per_platforms = {key: value for key, value in urls_per_platforms.items() if key == closest_platform}

@@ -37,14 +37,19 @@ def download_file(url, folder=None):
         filename = os.path.join(folder, os.path.split(url)[1])
     if os.path.exists(filename): return filename
     os.makedirs(os.path.split(filename)[0], exist_ok=True)
-    
-    raw = request_stream(url)
-    with open(filename, 'wb') as file:
-        shutil.copyfileobj(raw, file)
+
+    if url.startswith('gs:'):
+        print(f"\ngsutil cp {url} {folder}\n")
+        os.system(f"gsutil cp {url} {folder}")
+    else:
+        raw = request_stream(url)
+        with open(filename, 'wb') as file:
+            shutil.copyfileobj(raw, file)
     return filename
 
 
 def routing(args, thread_limit=10, single_wait=0, verbose=1, time_limit=3600, time_sleep=10):
+    args = list(set(args))
     thread_limit += threading.active_count()
     begin = datetime.now()
     
@@ -81,12 +86,12 @@ def download_files(urls_per_platforms, closest=False):
         if closest:
             dates = [dates[int(len(dates)/2)]]
 
-        filenames[platform] = []
+        filenames[platform] = {}
         for date in dates:
-            filenames[platform].append([])
-            folder = f".temp/{platform}/{date.strftime('%Y%m%dt%H%M%S')}/"
+            filenames[platform][date] = []
+            folder = f".temp/{platform}/"
             for url in urls_per_platforms[platform][date]:
-                filenames[platform][-1].append(folder + os.path.split(url)[1])
+                filenames[platform][date].append(folder + os.path.split(url)[1])
                 routing_args.append((url, folder))
 
     routing(routing_args)

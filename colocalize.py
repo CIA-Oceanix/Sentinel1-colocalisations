@@ -11,11 +11,10 @@ from datetime import datetime
 import matplotlib
 matplotlib.use('agg')
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
-from utils.requests import download_files
 from utils.sentinel1 import getter_polygon_from_key, get_iw_latlon
 from utils.closest_data import get_closest_filenames
 from utils.read import read_from_files_per_platform
@@ -52,7 +51,7 @@ def main(key=None, channel=None, sensoroperationalmode=None, platform_key = None
 
         if gif:
             if verbose: log_print(".gif generation is asked")
-            generate_gif(iw_polygon, channel, urls_per_platforms, f'outputs/{key}/{key}_{channel}.gif', verbose)
+            generate_gif(iw_polygon, channel, urls_per_platforms, f'outputs/{key}/{key}_{channel}.gif', verbose, read_from_files_per_platform)
         if verbose: log_print("Done")
     
     

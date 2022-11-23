@@ -26,7 +26,7 @@ from utils.sentinel1 import getter_polygon_from_key, get_iw_latlon
 
 from check_args import get_keys
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
