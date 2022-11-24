@@ -3,7 +3,7 @@
 Link to notebooks presenting colocations with Sentinel-1:
 
 - [NEXRAD L2 Reflectivity](readme/readme_nexrad.ipynb)
-- NEXRAD L3 [Part A](readme/readme_nexrad_lA.ipynb)/[Part B](readme/readme_nexrad_l3B.ipynb)
+- NEXRAD L3 [Part A](readme/readme_nexrad_l3A.ipynb)/[Part B](readme/readme_nexrad_l3B.ipynb)
 - [GOES16/17/18 & Himawari 8/9 ABI L2](readme/readme_abi.ipynb)
 - [GOES16/17/18 & Himawari 8/9 RRQPEF L2](readme/readme_rrqpe.ipynb)
 - [GOES16/17/28 GLM L2 Events](readme/readme_glm.ipynb)
