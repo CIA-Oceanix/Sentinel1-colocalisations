@@ -17,10 +17,18 @@ Here the list of the commands used in these notebooks:
 
 ## NEXRAD L2 Reflectivity
 ```
-python colocalize.py    20170108t015819 --platform_key nexrad --gif True
+! python colocalize_nexrad_l3.py 20170108t015819 --channel HHC --gif True
 ```
 
 ![20170108t015819_KVTX.gif](readme/20170108t015819_KVTX.gif)
+
+## NEXRAD L3 Hydrometeor Classification
+
+```
+python colocalize.py    20170108t015819 --platform_key nexrad --gif True
+```
+
+![20170108t015819_HHCVTX.gif](readme/20170108t015819_HHCVTX.gif)
 
 ## GOES16/17/18 & Himawari 8/9 ABI L2
 
