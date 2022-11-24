@@ -32,9 +32,7 @@ def platform_cmap_args(platform, channel):
         kargs['vmax'] =40
     elif channel[:3] == 'DPR':
         kargs['vmin'] =0
-        kargs['vmax'] = 500
-        cmap, norm = getDPR_cmap()
-        kargs['cmap'] = cmap
+        kargs['vmax'] = 100
     elif channel[:3] == 'NZM':
         kargs['vmin'] = 0
         kargs['vmax'] = 4
