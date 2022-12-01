@@ -32,9 +32,10 @@ def main(
     max_timedelta = None,
     time_step = None,
     create_gif=None,
-    verbose=None):
+    verbose=None,
+    delta_factor=None):
         
-    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step = check_args(
+    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
         sentinel1_key = sentinel1_key,
         sentinel1_keys_filename = sentinel1_keys_filename,
         requests_filename = requests_filename,
@@ -44,7 +45,8 @@ def main(
         max_timedelta = max_timedelta,
         time_step = time_step,
         create_gif = create_gif,
-        verbose = verbose
+        verbose = verbose,
+        delta_factor = delta_factor
     )
     
 
@@ -62,7 +64,7 @@ def main(
 
         if create_gif:
             if verbose: log_print(".gif generation is asked")
-            generate_gif(polygon, channel, urls_per_platforms, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read_from_files_per_platform, requested_date=requested_date)
+            generate_gif(polygon, channel, urls_per_platforms, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read_from_files_per_platform, requested_date=requested_date, delta_factor=delta_factor)
     if verbose: log_print("Done")
     
     

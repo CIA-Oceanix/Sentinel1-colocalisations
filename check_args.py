@@ -11,6 +11,8 @@ SATELLITE_PLATFORMS = GOES_SERIE + HIMAWARI_SERIE
 ABI_CHANNELS = ['C13', 'C14'] # C01 to C16 are available, but would need other cmap
 RRQPEF_CHANNELS = ['RRQPEF']
 GLM_CHANNELS = ['GLM']
+NEXRAD_L3_CHANNELS = [ 'DPR', 'N0Q', 'N0Q', 'N0M', 'N0H', 'HHC', 'N0Z']
+
 ERA5_CHANNELS = ['northward_wind_at_10_metres', 'eastward_wind_at_10_metres']
 
 with open('res/nexrad_stations.txt', 'r') as file:
@@ -34,7 +36,9 @@ def check_args(
     max_timedelta = None,
     time_step = None,
     create_gif=None,
-    verbose=None):
+    verbose=None,
+    delta_factor=None
+    ):
     from utils.sentinel1 import getter_polygon_from_key
     from utils.misc import log_print
 
@@ -44,6 +48,7 @@ def check_args(
     
     if max_timedelta is None: max_timedelta= 90
     if time_step is None: time_step= 10
+    if delta_factor is None: delta_factor=2
     
 
     # Choose plateform
@@ -55,6 +60,8 @@ def check_args(
         platforms = GOES_SERIE
     elif platform_key == 'era5':
         platforms = ERA5_PLATFORMS
+    elif channel in NEXRAD_L3_CHANNELS:
+        platforms = 'nexrad-level3'
     else:
         raise ValueError
 
@@ -83,8 +90,8 @@ def check_args(
                 [lon3, lat3],
                 [lon4, lat4],
             ]).astype('float')
-            requests.append((key, iw_datetime, iw_polygon))
+            requests.append((key, requested_datetime, polygon))
             
 
-    return requests, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step
+    return requests, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step, delta_factor
     

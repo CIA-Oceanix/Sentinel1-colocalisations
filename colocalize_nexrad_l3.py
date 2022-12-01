@@ -5,6 +5,7 @@ import os
 import fire
 import shutil
 import tarfile
+import zlib
 
 import numpy as np
 np.seterr(all="ignore")
@@ -28,10 +29,10 @@ from utils.closest_data import get_closest_nexrad_station
 from utils.projection import save_reprojection, reproject, generate_gif
 from utils.nexrad_l3 import read_melting_layer
 
-from check_args import get_keys
+from check_args import check_args
 
 
-shutil.rmtree('.temp', ignore_errors=True)
+#shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -53,7 +54,7 @@ def get_urls(channel, date):
     lines = cached_command('gsutil -q ls -l gs://gcp-public-data-nexrad-l3/' + prefix)
     for line in lines:
         line = line.replace('\n', '')
-        if line.endswith('.tar.gz'):
+        if line.endswith('.tar.gz') or line.endswith('.Z'):
             urls.append(line.split()[-1])
     return urls
 
@@ -77,13 +78,18 @@ def untar(filenames_per_platform, channel):
                 if filename in extracted:
                     new_filenames_per_platform[platform][date] += new_filenames_per_platform[platform][extracted[filename]]
                     continue
+                if filename.endswith('.tar.Z'):
+                    if not os.path.exists(filename[:-2]):
+                        os.system("gzip -kd " + filename)
+                    filename = filename[:-2]
                 with tarfile.open(filename) as file:
                     folder = os.path.split(filename)[0]
                     for compressed_filename in file.getnames():
+                        #print(compressed_filename.split('_')[-2], channel)
                         if compressed_filename.split('_')[-2] == channel:
                             new_filename = os.path.join(folder, compressed_filename)
-                            if os.path.exists(new_filename): continue
-                            file.extract(compressed_filename, folder)
+                            if not os.path.exists(new_filename):
+                                file.extract(compressed_filename, folder)
                             new_filenames_per_platform[platform][date].append(new_filename)
                 extracted[filename] = date
                 #os.remove(filename)
@@ -125,6 +131,7 @@ def read(filenames, platform=None, channel=None, requested_date=None):
         azimuth_grid,
         range_grid*1000
     )
+    
     if lons.shape[0] == data.shape[0] +1:
         lats = lats[:-1]
         lons = lons[:-1]
@@ -155,9 +162,10 @@ def main(
     max_timedelta = None,
     time_step = 5,
     create_gif = None,
-    verbose = None):
+    verbose = None,
+    delta_factor=None):
         
-    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step = check_args(
+    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
         sentinel1_key = sentinel1_key,
         sentinel1_keys_filename = sentinel1_keys_filename,
         requests_filename = requests_filename,
@@ -167,7 +175,8 @@ def main(
         max_timedelta = max_timedelta,
         time_step = time_step,
         create_gif = create_gif,
-        verbose = verbose
+        verbose = verbose,
+        delta_factor=delta_factor
     )
     
     for i, (filename, requested_date, polygon) in enumerate(keys):
@@ -196,12 +205,12 @@ def main(
         lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=channel)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
 
-        os.makedirs('outputs/' + key, exist_ok=True)
+        os.makedirs('outputs/' + filename, exist_ok=True)
         save_reprojection(closest_station, channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
         
         if create_gif:
             if verbose: log_print(".gif generation is asked")
-            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read, download=False)
+            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read, download=False, delta_factor=delta_factor)
     if verbose: log_print("Done")
 
 if __name__ == "__main__":

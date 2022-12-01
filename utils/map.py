@@ -29,21 +29,22 @@ def grid_from_polygon(polygon, shape):
     
     v1 = utm_polygon[1]
     v2 = utm_polygon[2]
-    easting_grid[0] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
-    northing_grid[0] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
+    
+    easting_grid[0]  = v1[1] if v1[1] == v2[1] else np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
+    northing_grid[0] = v1[0] if v1[0] == v2[0] else np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
     
     v1 = utm_polygon[0]
     v2 = utm_polygon[3]
-    easting_grid[-1] = np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
-    northing_grid[-1] = np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
+    easting_grid[-1]  = v1[1] if v1[1] == v2[1] else np.arange(v1[1], v2[1], (v2[1]-v1[1])/easting_grid.shape[1])[:easting_grid.shape[1]]
+    northing_grid[-1] = v1[0] if v1[0] == v2[0] else np.arange(v1[0], v2[0], (v2[0]-v1[0])/northing_grid.shape[1])[:northing_grid.shape[1]]
     for i in range(easting_grid.shape[1]):
         v1 = easting_grid[0,i]
         v2 = easting_grid[-1,i]
-        easting_grid[:, i] = np.arange(v1, v2, (v2-v1)/easting_grid.shape[0])[:easting_grid.shape[0]]
+        easting_grid[:, i] = v1 if v1 == v2 else np.arange(v1, v2, (v2-v1)/easting_grid.shape[0])[:easting_grid.shape[0]]
         
         v1 = northing_grid[0,i]
         v2 = northing_grid[-1,i]
-        northing_grid[:, i] = np.arange(v1, v2, (v2-v1)/northing_grid.shape[0])[:northing_grid.shape[0]]
+        northing_grid[:, i] = v1 if v1 == v2 else np.arange(v1, v2, (v2-v1)/northing_grid.shape[0])[:northing_grid.shape[0]]
  
     lat_grid, lon_grid = utm.to_latlon(northing_grid, easting_grid, ZONE_NUMBER, ZONE_LETTER, strict=False)
     return lat_grid, lon_grid
