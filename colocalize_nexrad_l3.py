@@ -23,7 +23,7 @@ WGS84 = pyproj.Geod(ellps='WGS84')
 
 from utils.misc import log_print
 from utils.requests import download_files
-from utils.sentinel1 import getter_polygon_from_key, get_iw_latlon
+from utils.sentinel1 import get_iw_latlon
 from utils.closest_data import get_closest_nexrad_station
 from utils.projection import save_reprojection, reproject, generate_gif
 from utils.nexrad_l3 import read_melting_layer
@@ -90,7 +90,7 @@ def untar(filenames_per_platform, channel):
     return new_filenames_per_platform
 
 
-def read(filenames, platform=None, channel=None):
+def read(filenames, platform=None, channel=None, requested_date=None):
     radar =  Level3File(filenames[0])
 
     if channel[:3] in ["N0M", "N1M", "N2M", "N3M"]:
@@ -145,47 +145,64 @@ def restrict_filenames_from_date(filenames_per_platform):
                     smallest_timedelta = current_timedelta
     return filenames_per_platform
     
-def main(key, channel='DPR', verbose=1, sensoroperationalmode="IW", max_timedelta=90, time_step=5, gif=True):
-    keys = get_keys(key)
-
-    if verbose: log_print(f"Build {sensoroperationalmode} getter")
-    getter = getter_polygon_from_key(sensoroperationalmode)
-
-    for key in keys:
-        key = key.lower()
-        iw_polygon = getter(key)[1]
-        s1_time = datetime.strptime(key, '%Y%m%dt%H%M%S')
-        owi_lat, owi_lon = get_iw_latlon(polygon=iw_polygon)
+def main(
+    sentinel1_key = None,
+    sentinel1_keys_filename = None,
+    requests_filename = None,
+    channel = 'DPR',
+    sensor_operational_mode = None,
+    platform_key = None,
+    max_timedelta = None,
+    time_step = 5,
+    create_gif = None,
+    verbose = None):
+        
+    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step = check_args(
+        sentinel1_key = sentinel1_key,
+        sentinel1_keys_filename = sentinel1_keys_filename,
+        requests_filename = requests_filename,
+        channel = channel,
+        sensor_operational_mode = sensor_operational_mode,
+        platform_key = platform_key,
+        max_timedelta = max_timedelta,
+        time_step = time_step,
+        create_gif = create_gif,
+        verbose = verbose
+    )
+    
+    for i, (filename, requested_date, polygon) in enumerate(keys):
+        if verbose: log_print(f"Request {i+1}/{len(keys)}: {filename}")
+        projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
         
         if verbose: log_print(f"Retrieve NEXRAD colocalizations")
-        closest_station = get_closest_nexrad_station(iw_polygon)
+        closest_station = get_closest_nexrad_station(polygon)
         channel += closest_station[1:]
         if verbose: log_print(f"Closest station is {closest_station}")
 
         if verbose: log_print(f"Downloading")
-        urls_per_platforms = get_bucket_urls(closest_station, s1_time, max_timedelta, time_step)
+        urls_per_platforms = get_bucket_urls(closest_station, requested_date, max_timedelta, time_step)
         filenames_per_platform = download_files(urls_per_platforms, closest=False)
         
         if verbose: log_print("Extracting")
         filenames_per_platform = untar(filenames_per_platform, channel)
         if not filenames_per_platform[closest_station]:
-            if verbose: log_print(f"Station {closest_station} has no data for channel {channel} at {s1_time}")
+            if verbose: log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}")
             return
             
         close_filenames_per_platform = restrict_filenames_from_date(filenames_per_platform)
         
         if verbose: log_print("Project on S1 lat/lon grid")
-        closest_date = sorted([(abs(s1_time - date), date) for date in filenames_per_platform[closest_station]])[0][1]
+        closest_date = sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
         lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=channel)
-        closest_file_data = reproject(closest_station, data, lats, lons, owi_lat, owi_lon)
+        closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
 
         os.makedirs('outputs/' + key, exist_ok=True)
-        save_reprojection(closest_station, channel, closest_file_data, f'outputs/{key}/{key}_{channel}')
+        save_reprojection(closest_station, channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
         
-        if gif:
+        if create_gif:
             if verbose: log_print(".gif generation is asked")
-            generate_gif(iw_polygon, channel, filenames_per_platform, f'outputs/{key}/{key}_{channel}.gif', verbose, read, download=False)
-        if verbose: log_print("Done")
+            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read, download=False)
+    if verbose: log_print("Done")
 
 if __name__ == "__main__":
     fire.Fire(main)

@@ -27,11 +27,11 @@ def platform_cmap_args(platform, channel):
         kargs['vmax'] =100
         kargs['cmap'] = plt.get_cmap('hot')
         kargs['cmap'].set_under(color=(0.5,0.5,0.5))
-    elif channel in NEXRAD_CHANNELS + RRQPEF_CHANNELS or channel[:3] in ['N0Z']:
-        kargs['vmin'] =0
-        kargs['vmax'] =40
+    elif channel in NEXRAD_CHANNELS + RRQPEF_CHANNELS or channel[:3] in ['N0Z', 'N0Q']:
+        kargs['vmin'] = 0
+        kargs['vmax'] = 60
     elif channel[:3] == 'DPR':
-        kargs['vmin'] =0
+        kargs['vmin'] = 0
         kargs['vmax'] = 100
     elif channel[:3] == 'NZM':
         kargs['vmin'] = 0
@@ -46,6 +46,9 @@ def platform_cmap_args(platform, channel):
         kargs['vmin'] = 0
         kargs['vmax'] = 15
         kargs['cmap'] = cmap
-
+    elif 'wind_at_10_metres' in channel:
+        kargs['vmin'] = -20
+        kargs['vmax'] = 20
+        kargs['cmap'] = plt.get_cmap('coolwarm')
         
     return kargs, norm, colobar_postprocess

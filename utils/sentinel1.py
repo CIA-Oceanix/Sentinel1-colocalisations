@@ -4,17 +4,12 @@ import numpy as np
 from utils.map import get_distance, grid_from_polygon
 
 
-def get_iw_latlon(polygon=None, metadata_filename=None, shape=None):
-    if metadata_filename is not None:
-        metadata = np.load(metadata_filename)
-        return metadata['owiLat'], metadata['owiLon']
-    else:
-        if shape is None:
-            height = int(get_distance(polygon[0,1], polygon[0,0], polygon[1,1], polygon[1,0])*5)
-            width = int(get_distance(polygon[0,1], polygon[0,0], polygon[-1,1], polygon[-1,0])*5)
-            owiLat, owiLon = grid_from_polygon(polygon, (height, width))
-            return owiLat, owiLon
-        return grid_from_polygon(polygon, shape)
+def get_iw_latlon(polygon, resolution=5):
+    # resolution is the number of point per km
+    height = int(get_distance(polygon[0,1], polygon[0,0], polygon[1,1], polygon[1,0])*5)
+    width = int(get_distance(polygon[0,1], polygon[0,0], polygon[-1,1], polygon[-1,0])*5)
+    owiLat, owiLon = grid_from_polygon(polygon, (height, width))
+    return owiLat, owiLon
     
 def getter_polygon_from_key(sensoroperationalmode='IW', polarisationmode='VV', verbose=1):
     products = {}

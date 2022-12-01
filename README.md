@@ -18,7 +18,7 @@ Here the list of the commands used in these notebooks:
 
 ## NEXRAD L2 Reflectivity
 ```
-! python colocalize_nexrad_l3.py 20170108t015819 --channel HHC --gif True
+! python colocalize_nexrad_l3.py 20170108t015819 --channel HHC --create_gif True
 ```
 
 ![20170108t015819_KVTX.gif](readme/20170108t015819_KVTX.gif)
@@ -26,7 +26,7 @@ Here the list of the commands used in these notebooks:
 ## NEXRAD L3 Hydrometeor Classification
 
 ```
-python colocalize.py    20170108t015819 --platform_key nexrad --gif True
+python colocalize.py    20170108t015819 --platform_key nexrad --create_gif True
 ```
 
 ![20170108t015819_HHCVTX.gif](readme/20170108t015819_HHCVTX.gif)
@@ -34,7 +34,7 @@ python colocalize.py    20170108t015819 --platform_key nexrad --gif True
 ## GOES16/17/18 & Himawari 8/9 ABI L2
 
 ```
-python colocalize.py    20210913t092920 --platform_key abi --channel C14 --gif True
+python colocalize.py    20210913t092920 --platform_key abi --channel C14 --create_gif True
 ```
 
 ![20210913t092920_C14.gif](readme/20210913t092920_C14.gif)
@@ -43,7 +43,7 @@ python colocalize.py    20210913t092920 --platform_key abi --channel C14 --gif T
 ## GOES16/17/18 & Himawari 8/9 RRQPEF L2
 
 ```
-python colocalize.py    20210913t092920 --platform_key rrqpef --gif True
+python colocalize.py    20210913t092920 --platform_key rrqpef --create_gif True
 ```
 
 ![20200827t000933_RRQPEF.gif](readme/20200827t000933_RRQPEF.gif)
@@ -52,7 +52,7 @@ python colocalize.py    20210913t092920 --platform_key rrqpef --gif True
 ## GOES16/17/28 GLM L2 Events
 
 ```
-python colocalize.py    20200827t000933 --platform_key glm --gif True
+python colocalize.py    20200827t000933 --platform_key glm --create_gif True
 ```
 
 ![20200827t000933_GLM.gif](readme/20200827t000933_GLM.gif)

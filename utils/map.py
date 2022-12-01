@@ -94,7 +94,7 @@ def plot_on_map(platform, channel, data, platform_lat, platform_lon, lat_grid, l
     if m is None:
         plt.figure(figsize=(12,12))
         m = ini_map(lat_grid, lon_grid)
-        
+
     kwargs, norm, colorbar_postprocess = platform_cmap_args(platform, channel)
     colormesh = m.pcolormesh(platform_lon, platform_lat, data, norm=norm, latlon=True, shading='auto', **kwargs)
     

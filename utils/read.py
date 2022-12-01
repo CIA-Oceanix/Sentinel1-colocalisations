@@ -1,9 +1,10 @@
 import numpy as np
 from netCDF4 import Dataset
 
+from datetime import datetime
 from utils.map import grid_from_polygon
 
-from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, ABI_CHANNELS, RRQPEF_CHANNELS, GLM_CHANNELS
+from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, ABI_CHANNELS, RRQPEF_CHANNELS, GLM_CHANNELS, ERA5_PLATFORMS
 
 
 def accumulate_lightning_maps(filenames):
@@ -41,8 +42,8 @@ def accumulate_lightning_maps(filenames):
     return data, lat_grid, lon_grid
 
     
-def read_from_files_per_platform(filenames, platform, channel):
-    def latlon_from_file(filename, platform, channel):
+def read_from_files_per_platform(filenames, platform, channel, requested_date=None):
+    def latlon_from_file(filename, platform, channel, requested_date=None):
         def latlon_from_abi_file(x, y, lon_origin, H, r_eq, r_pol):
             x, y = np.meshgrid(x, y)
 
@@ -91,7 +92,17 @@ def read_from_files_per_platform(filenames, platform, channel):
                     data = dataset['RRQPE'][:]
                     platform_lat = dataset['Latitude'][:]
                     platform_lon = dataset['Longitude'][:]
-                    
+            elif platform in ERA5_PLATFORMS:
+                lons = dataset['lon'][:]
+                lons[lons>180] = lons[lons>180] - 360
+                lats = dataset['lat'][:]
+                time0 = dataset['time0'][:]
+                time0 = np.vectorize(datetime.fromtimestamp)(time0)
+                platform_lon, platform_lat = np.meshgrid(lons, lats)
+
+                time_index = np.argmin(abs(time0 - requested_date))
+                data = dataset[list(dataset.variables)[-1]][time_index]
+
         return platform_lat, platform_lon, data
 
     if isinstance(filenames, dict):  filenames = list(filenames.values())[0]
@@ -127,6 +138,11 @@ def read_from_files_per_platform(filenames, platform, channel):
                 data[n*x:n*(x+1), n*y:n*(y+1)] = tile_data
         elif channel in RRQPEF_CHANNELS:
             platform_lat, platform_lon, data = latlon_from_file(filenames[0], platform, channel)
+    elif platform in ERA5_PLATFORMS:
+        platform_lat, platform_lon, data = latlon_from_file(filenames[0], platform, channel, requested_date=requested_date)
+        platform_lat = platform_lat.filled(np.nan)
+        platform_lon = platform_lon.filled(np.nan)
+        data = data.filled(np.nan)
     elif platform in NEXRAD_BASIS:
         import pyart # /!\ Import here because this is a special library
         assert len(filenames) == 1

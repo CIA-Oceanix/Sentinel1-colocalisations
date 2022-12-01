@@ -11,7 +11,7 @@ from utils.read import read_from_files_per_platform
 from utils.misc import log_print
 from utils.map import grid_from_polygon, get_distance
 
-from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS
+from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS, ERA5_PLATFORMS
 
 
 
@@ -34,7 +34,7 @@ def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
 def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     if platform in SATELLITE_PLATFORMS:
         data, platform_lat, platform_lon = trim(data, platform_lat, platform_lon, owi_lat, owi_lon)
-        
+
     platform_lat[np.isnan(platform_lat)] = 0
     platform_lon[np.isnan(platform_lon)] = 0
     data[np.isnan(data)] = 0
@@ -42,7 +42,8 @@ def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
     new_data = griddata(
         np.stack((platform_lat.flatten(), platform_lon.flatten()), axis=1),
         data.flatten(),
-        np.stack((owi_lat.flatten(), owi_lon.flatten()), axis=1)
+        np.stack((owi_lat.flatten(), owi_lon.flatten()), axis=1),
+        method='nearest'
     ).reshape(owi_lat.shape).astype('float')
     return new_data
 
@@ -92,7 +93,7 @@ def increased_grid(polygon, km_per_pixel=1, delta_factor=1):
 
     return grid_from_polygon(frame_polygon, (height, width))
     
-def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose, read_function, download=True):
+def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose, read_function, download=True, requested_date=None):
     def png_to_gif(input_filenames, output_filename):
         imgs = (PIL.Image.open(filename) for filename in input_filenames)
         img = next(imgs)
@@ -108,8 +109,8 @@ def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose,
     for platform in filenames_per_platform:
         png_filenames = []
         for date, filenames in filenames_per_platform[platform].items():
-            platform_lat, platform_lon, data = read_function(filenames, platform, channel)
-            if platform in SATELLITE_PLATFORMS:
+            platform_lat, platform_lon, data = read_function(filenames, platform, channel, requested_date=date)
+            if platform in SATELLITE_PLATFORMS + ERA5_PLATFORMS:
                 data, platform_lat, platform_lon = trim(data, platform_lat, platform_lon, lat_grid, lon_grid)
 
             folder = os.path.split(filenames[0])[0]

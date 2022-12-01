@@ -10,28 +10,32 @@ from utils.requests import download_files
 from utils.projection import get_distance
 from utils.read import read_from_files_per_platform
 
-from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS, ABI_CHANNELS, RRQPEF_CHANNELS, NEXRAD_CHANNELS, GLM_CHANNELS
+from check_args import GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS, ERA5_PLATFORMS
+from check_args import ABI_CHANNELS, RRQPEF_CHANNELS, NEXRAD_CHANNELS, GLM_CHANNELS
 
 def get_bucket_url(platform, channel, date):
-    url_basis = f"https://noaa-{platform}.s3.amazonaws.com/?prefix="
-    if platform in HIMAWARI_SERIE:
-        date_string = f"{date.year}/{date.strftime('%m')}/{date.day}/{date.hour:02}{int(date.minute/10)}0"
-        if channel in ABI_CHANNELS:
-            prefix = f"AHI-L2-FLDK-ISatSS/{date_string}/OR_HFD-020-B12-M1{channel}"
-        elif channel in RRQPEF_CHANNELS:
-            prefix = f"AHI-L2-FLDK-RainfallRate/{date_string}"
-    elif platform in GOES_SERIE:
-        date_string = f"{date.year}/{date.strftime('%j')}/{date.hour:02}"
-        if channel in ABI_CHANNELS:
-            prefix = f"ABI-L2-MCMIPF/{date_string}"
-        elif channel in RRQPEF_CHANNELS:
-            prefix = f"ABI-L2-RRQPEF/{date_string}"
-        elif channel in GLM_CHANNELS:
-            prefix = f"GLM-L2-LCFA/{date_string}"
-            
-    elif platform in NEXRAD_BASIS:
-        prefix = f"{date.year}/{date.month:02}/{date.day:02}/{channel}"
-    return url_basis + prefix
+    if platform in ERA5_PLATFORMS:
+        url_basis = "https://era5-pds.s3.amazonaws.com/"
+        prefix = f"{date.year}/{date.strftime('%m')}/data/{channel}"
+    else:
+        url_basis = f"https://noaa-{platform}.s3.amazonaws.com/"
+        if platform in HIMAWARI_SERIE:
+            date_string = f"{date.year}/{date.strftime('%m')}/{date.day}/{date.hour:02}{int(date.minute/10)}0"
+            if channel in ABI_CHANNELS:
+                prefix = f"AHI-L2-FLDK-ISatSS/{date_string}/OR_HFD-020-B12-M1{channel}"
+            elif channel in RRQPEF_CHANNELS:
+                prefix = f"AHI-L2-FLDK-RainfallRate/{date_string}"
+        elif platform in GOES_SERIE:
+            date_string = f"{date.year}/{date.strftime('%j')}/{date.hour:02}"
+            if channel in ABI_CHANNELS:
+                prefix = f"ABI-L2-MCMIPF/{date_string}"
+            elif channel in RRQPEF_CHANNELS:
+                prefix = f"ABI-L2-RRQPEF/{date_string}"
+            elif channel in GLM_CHANNELS:
+                prefix = f"GLM-L2-LCFA/{date_string}"
+        elif platform in NEXRAD_BASIS:
+            prefix = f"{date.year}/{date.month:02}/{date.day:02}/{channel}"
+    return url_basis, url_basis + "?prefix=" + prefix
 
 
 def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step, platforms):
@@ -39,11 +43,12 @@ def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step, platforms):
     dates = [iw_datetime + timedelta(minutes=x) for x in time_steps]
     
     urls = {}
+    url_basis = {}
     for platform in platforms:
         urls[platform] = {}
         for date in dates:
-            urls[platform][date] = get_bucket_url(platform, channel, date)
-    return urls
+            url_basis[platform], urls[platform][date] = get_bucket_url(platform, channel, date)
+    return url_basis, urls
 
 
 @lru_cache(maxsize=2**16)
@@ -57,14 +62,14 @@ def bucket_to_urls(bucket_url):
     return urls
 
 
-def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step):
+def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step, url_basis):
     urls_per_platform = {}
     closest_datetime = {}
 
     time_step = timedelta(minutes=time_step)
     for platform in bucket_urls_per_platform:
         urls_per_platform[platform] = {}
-        url_base = f"https://noaa-{platform}.s3.amazonaws.com/"
+        platform_basis = url_basis[platform]
 
         for date, bucket_url in bucket_urls_per_platform[platform].items():
             urls = bucket_to_urls(bucket_url)
@@ -86,12 +91,14 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step):
                         if not url.endswith('_V06'): continue
                         date_string = os.path.split(url)[1][4:-4]
                         url_datetime = datetime.strptime(date_string, '%Y%m%d_%H%M%S')
+                    elif platform in ERA5_PLATFORMS:
+                        url_datetime = datetime(year=int(url[:4]), month=int(url[5:7]), day=iw_datetime.day)
                 except ValueError: continue  # it means that some unsupported file was in the list
                         
                 current_timedelta = abs(url_datetime - date)
                 if current_timedelta < time_step:
-                    closest_urls[current_timedelta] = closest_urls.get(current_timedelta, []) + [url_base + url]
-                    urls_per_platform[platform][date] = urls_per_platform[platform].get(date, []) + [url_base + url]
+                    closest_urls[current_timedelta] = closest_urls.get(current_timedelta, []) + [platform_basis + url]
+                    urls_per_platform[platform][date] = urls_per_platform[platform].get(date, []) + [platform_basis + url]
                     if smallest_timedelta is None or current_timedelta < smallest_timedelta:
                         smallest_timedelta = current_timedelta
             if smallest_timedelta is not None:
@@ -106,7 +113,7 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step):
     return urls_per_platform
 
 
-def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel):
+def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel, requested_date=None):
     mean_iw_lat = np.mean(iw_polygon[:,1])
     mean_iw_lon = np.mean(iw_polygon[:,0])
  
@@ -114,7 +121,7 @@ def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel):
 
     res = {}
     for platform, filenames in closest_filenames_per_platform.items():
-        platform_lat, platform_lon, data = read_from_files_per_platform(filenames, platform, channel)
+        platform_lat, platform_lon, data = read_from_files_per_platform(filenames, platform, channel, requested_date=requested_date)
         res[platform] = platform_lat, platform_lon, data
 
         mean_platform_lat = np.nanmean(platform_lat)
@@ -127,7 +134,7 @@ def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel):
     return closest_platform, res[closest_platform]
 
 
-def get_closest_nexrad_station(polygon, blacklist=[]):
+def get_closest_nexrad_station(polygon, blacklist=['KVTX']):
     def get_nexrad_stations():
         def dms2dd(degrees, minutes, seconds, direction):
             dd = float(degrees) + float(minutes)/60 + float(seconds)/(60*60);
@@ -168,8 +175,8 @@ def get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_
     if platforms == NEXRAD_BASIS:
         channel = get_closest_nexrad_station(iw_polygon)
     
-    bucket_urls_per_platform = get_bucket_urls(channel, iw_datetime, max_timedelta=max_timedelta, time_step=time_step, platforms=platforms)
-    urls_per_platforms = get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step)
+    url_basis, bucket_urls_per_platform = get_bucket_urls(channel, iw_datetime, max_timedelta=max_timedelta, time_step=time_step, platforms=platforms)
+    urls_per_platforms = get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step, url_basis)
 
     closest_filenames_per_platform = download_files(urls_per_platforms, closest=True)
     
@@ -177,6 +184,6 @@ def get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_
         closest_date = sorted([(abs(iw_datetime - date), date) for date in datedic])[0][1]
         closest_filenames_per_platform[plaftorm] = {closest_date: datedic[closest_date]}
 
-    closest_platform, (platform_lat, platform_lon, data) = get_closest_platform(closest_filenames_per_platform, iw_polygon, channel)
+    closest_platform, (platform_lat, platform_lon, data) = get_closest_platform(closest_filenames_per_platform, iw_polygon, channel, requested_date=iw_datetime)
     urls_per_platforms = {key: value for key, value in urls_per_platforms.items() if key == closest_platform}
     return channel, closest_platform, urls_per_platforms, (platform_lat, platform_lon, data)

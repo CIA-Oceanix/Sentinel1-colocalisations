@@ -6,16 +6,14 @@ import shutil
 import numpy as np
 np.seterr(all="ignore")
 
-from datetime import datetime
-
 import matplotlib
-matplotlib.use('agg')
+#matplotlib.use('agg')
 
-shutil.rmtree('.temp', ignore_errors=True)
+#shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
-from utils.sentinel1 import getter_polygon_from_key, get_iw_latlon
+from utils.sentinel1 import get_iw_latlon
 from utils.closest_data import get_closest_filenames
 from utils.read import read_from_files_per_platform
 from utils.projection import reproject, save_reprojection, generate_gif
@@ -24,35 +22,48 @@ from utils.misc import log_print
 from check_args import check_args, GOES_SERIE, HIMAWARI_SERIE, NEXRAD_BASIS, SATELLITE_PLATFORMS
 
 
-def main(key=None, channel=None, sensoroperationalmode=None, platform_key = None, max_timedelta=None, time_step=None, gif=True, verbose=None):
-
-    keys, channel, verbose, sensoroperationalmode, platforms, gif, max_timedelta, time_step = check_args(
-        key=key, channel=channel, verbose=sensoroperationalmode, sensoroperationalmode=sensoroperationalmode,
-        platform_key=platform_key, gif=gif, max_timedelta=max_timedelta, time_step=time_step
+def main(
+    sentinel1_key = None,
+    sentinel1_keys_filename = None,
+    requests_filename = None,
+    channel = None,
+    sensor_operational_mode = None,
+    platform_key = None,
+    max_timedelta = None,
+    time_step = None,
+    create_gif=None,
+    verbose=None):
+        
+    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step = check_args(
+        sentinel1_key = sentinel1_key,
+        sentinel1_keys_filename = sentinel1_keys_filename,
+        requests_filename = requests_filename,
+        channel = channel,
+        sensor_operational_mode = sensor_operational_mode,
+        platform_key = platform_key,
+        max_timedelta = max_timedelta,
+        time_step = time_step,
+        create_gif = create_gif,
+        verbose = verbose
     )
     
-    if verbose: log_print(f"Build {sensoroperationalmode} getter")
-    getter = getter_polygon_from_key(sensoroperationalmode)
 
-    for key in keys:
-        if verbose: log_print(f"Run on key: {key}")
-        iw_datetime = datetime.strptime(key, '%Y%m%dt%H%M%S')
-        iw_filename, iw_polygon = getter(key)[:2]
-        owi_lat, owi_lon = get_iw_latlon(polygon=iw_polygon)
-
+    for i, (filename, requested_date, polygon) in enumerate(keys):
+        if verbose: log_print(f"Request {i+1}/{len(keys)}: {filename}")
+        projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
+            
         if verbose: log_print("Retrieve files urls")
-        channel, platform, urls_per_platforms, (platform_lat, platform_lon, closest_file_data) = get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_step, platforms)
+        channel, platform, urls_per_platforms, (platform_lat, platform_lon, closest_file_data) = get_closest_filenames(channel, polygon, requested_date, max_timedelta, time_step, platforms)
         if verbose: log_print(f"Selected plateform is {platform} with channel {channel}")
 
-
         if verbose: log_print("Project on S1 lat/lon grid")
-        closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, owi_lat, owi_lon)
-        save_reprojection(platform, channel,closest_file_data, f'outputs/{key}/{key}_{channel}')
+        closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats, projection_lons)
+        save_reprojection(platform, channel,closest_file_data, f'outputs/{filename}/{filename}_{channel}')
 
-        if gif:
+        if create_gif:
             if verbose: log_print(".gif generation is asked")
-            generate_gif(iw_polygon, channel, urls_per_platforms, f'outputs/{key}/{key}_{channel}.gif', verbose, read_from_files_per_platform)
-        if verbose: log_print("Done")
+            generate_gif(polygon, channel, urls_per_platforms, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read_from_files_per_platform, requested_date=requested_date)
+    if verbose: log_print("Done")
     
     
 if __name__ == "__main__":
