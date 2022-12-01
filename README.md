@@ -18,7 +18,7 @@ Here the list of the commands used in these notebooks:
 
 ## NEXRAD L2 Reflectivity
 ```
-! python colocalize_nexrad_l3.py 20170108t015819 --channel HHC --create_gif True
+python colocalize.py    20170108t015819 --platform_key nexrad --create_gif True
 ```
 
 ![20170108t015819_KVTX.gif](readme/20170108t015819_KVTX.gif)
@@ -26,7 +26,7 @@ Here the list of the commands used in these notebooks:
 ## NEXRAD L3 Hydrometeor Classification
 
 ```
-python colocalize.py    20170108t015819 --platform_key nexrad --create_gif True
+python colocalize_nexrad_l3.py 20170108t015819 --channel HHC --create_gif True
 ```
 
 ![20170108t015819_HHCVTX.gif](readme/20170108t015819_HHCVTX.gif)
@@ -56,6 +56,15 @@ python colocalize.py    20200827t000933 --platform_key glm --create_gif True
 ```
 
 ![20200827t000933_GLM.gif](readme/20200827t000933_GLM.gif)
+
+
+## ERA5 Wind Speed
+
+```
+python colocalize.py    20200827t000933 --platform_key era5 --channel northward_wind_at_10_metres
+```
+
+![era5.20200826t235933.northward_wind_at_10_metres.png](readme/era5.20200826t235933.northward_wind_at_10_metres.png)
 
 ## Sentinel3 A/B OLCI
 
