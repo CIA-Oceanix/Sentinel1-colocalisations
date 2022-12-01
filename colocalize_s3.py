@@ -120,27 +120,29 @@ def project_s3_data(data, iw_polygon):
 def main(key, verbose=1, sensoroperationalmode="IW"):
     keys = get_keys(key)
 
-    if verbose: log_print(f"Build {sensoroperationalmode} getter")
+    if verbose > 1: log_print(f"Build {sensoroperationalmode} getter")
     getter = getter_polygon_from_key(sensoroperationalmode)
 
     for key in keys:
+        if verbose: log_print(f"Request {i+1}/{len(keys)}: {key}")
+        
         key = key.lower()
         iw_polygon = getter(key)[1]
         s1_time = datetime.strptime(key, '%Y%m%dt%H%M%S')
         
-        if verbose: log_print(f"Retrieve Sentinel3 colocalizations")
+        if verbose > 1: log_print(f"Retrieve Sentinel3 colocalizations")
         colocalizations = get_download_args(key, iw_polygon)
         lat_grid, lon_grid = increased_grid(iw_polygon, km_per_pixel=1, delta_factor=2)
 
-        if verbose: log_print(f"Download Sentinel3 colocalizations")
+        if verbose > 1: log_print(f"Download Sentinel3 colocalizations")
         args = [(url, f".temp/{key}//{filename}") for filename, url in colocalizations]
 
         routing(args, thread_limit=4)
 
-        if verbose: log_print(f"Unzip Sentinel3 colocalizations")
+        if verbose > 1: log_print(f"Unzip Sentinel3 colocalizations")
         new_folders = [unzip(filename) for url, filename in args]
 
-        if verbose: log_print(f"Draw Sentinel3 around the Sentinel1 observation")
+        if verbose > 1: log_print(f"Draw Sentinel3 around the Sentinel1 observation")
         m = None
 
         datas = []
@@ -151,10 +153,10 @@ def main(key, verbose=1, sensoroperationalmode="IW"):
             m, (platform_lat, platform_lon, data) = draw_s3_on_map(folder, iw_polygon, lat_grid, lon_grid, m, filename)
             datas.append((abs(s1_time-s3_time), platform_lat, platform_lon, data))
 
-        if verbose: log_print(f"Project Sentinel3 on Sentinel1 grid")
+        if verbose > 1: log_print(f"Project Sentinel3 on Sentinel1 grid")
         data = project_s3_data(datas, iw_polygon)
         save_reprojection(PLATFORM, CHANNEL, data, f"outputs/{key}/{key}_S3")
-        if verbose: log_print(f"Done")
+    if verbose: log_print(f"Done")
 
 if __name__ == "__main__":
     fire.Fire(main)

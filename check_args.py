@@ -22,7 +22,7 @@ def get_keys(key):
     assert os.path.exists(key)
     with open(key, 'r') as file:
         lines = file.readlines()
-        keys = [line.replace('\n', 'r') for line in lines]
+        keys = [line.replace('\n', '') for line in lines]
     return keys
     
 
@@ -43,7 +43,7 @@ def check_args(
     from utils.misc import log_print
 
     # Set default values
-    if verbose is None: verbose = 1
+    if verbose is None: verbose = 2
     if requests_filename is None and sensor_operational_mode is None: sensor_operational_mode = 'IW'
     
     if max_timedelta is None: max_timedelta= 90
@@ -71,7 +71,7 @@ def check_args(
     # Format the requests
     requests = []
     if sentinel1_key or sentinel1_keys_filename:
-        if verbose: log_print(f"Build {sensor_operational_mode} getter")
+        if verbose > 1: log_print(f"Build {sensor_operational_mode} getter")
         getter = getter_polygon_from_key(sensor_operational_mode)
 
         keys = get_keys(sentinel1_keys_filename) if sentinel1_keys_filename else [sentinel1_key]

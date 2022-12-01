@@ -96,11 +96,11 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step, url
                 except ValueError: continue  # it means that some unsupported file was in the list
                         
                 current_timedelta = abs(url_datetime - date)
-                if current_timedelta < time_step:
-                    closest_urls[current_timedelta] = closest_urls.get(current_timedelta, []) + [platform_basis + url]
-                    urls_per_platform[platform][date] = urls_per_platform[platform].get(date, []) + [platform_basis + url]
-                    if smallest_timedelta is None or current_timedelta < smallest_timedelta:
-                        smallest_timedelta = current_timedelta
+                
+                closest_urls[current_timedelta] = closest_urls.get(current_timedelta, []) + [platform_basis + url]
+                urls_per_platform[platform][date] = urls_per_platform[platform].get(date, []) + [platform_basis + url]
+                if smallest_timedelta is None or current_timedelta < smallest_timedelta:
+                    smallest_timedelta = current_timedelta
             if smallest_timedelta is not None:
                 if channel in ABI_CHANNELS + RRQPEF_CHANNELS + NEXRAD_CHANNELS:
                     urls_per_platform[platform][date] = closest_urls[smallest_timedelta]
@@ -177,7 +177,6 @@ def get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_
     
     url_basis, bucket_urls_per_platform = get_bucket_urls(channel, iw_datetime, max_timedelta=max_timedelta, time_step=time_step, platforms=platforms)
     urls_per_platforms = get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step, url_basis)
-
     closest_filenames_per_platform = download_files(urls_per_platforms, closest=True)
     
     for plaftorm, datedic in closest_filenames_per_platform.items():

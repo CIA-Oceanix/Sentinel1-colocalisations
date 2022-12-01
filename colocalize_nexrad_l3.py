@@ -32,7 +32,7 @@ from utils.nexrad_l3 import read_melting_layer
 from check_args import check_args
 
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -69,6 +69,7 @@ def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step):
 
 def untar(filenames_per_platform, channel):
     new_filenames_per_platform = {}
+    
     for platform in filenames_per_platform:
         extracted = {}
         new_filenames_per_platform[platform] = {}
@@ -76,22 +77,18 @@ def untar(filenames_per_platform, channel):
             new_filenames_per_platform[platform][date] = []
             for filename in filenames:
                 if filename in extracted:
-                    new_filenames_per_platform[platform][date] += new_filenames_per_platform[platform][extracted[filename]]
+                    new_filenames_per_platform[platform][date] += extracted[filename]
                     continue
-                if filename.endswith('.tar.Z'):
-                    if not os.path.exists(filename[:-2]):
-                        os.system("gzip -kd " + filename)
-                    filename = filename[:-2]
+                    
                 with tarfile.open(filename) as file:
                     folder = os.path.split(filename)[0]
-                    for compressed_filename in file.getnames():
-                        #print(compressed_filename.split('_')[-2], channel)
+                    for i, compressed_filename in enumerate(file.getnames()):
                         if compressed_filename.split('_')[-2] == channel:
                             new_filename = os.path.join(folder, compressed_filename)
                             if not os.path.exists(new_filename):
                                 file.extract(compressed_filename, folder)
                             new_filenames_per_platform[platform][date].append(new_filename)
-                extracted[filename] = date
+                extracted[filename] = new_filenames_per_platform[platform][date]
                 #os.remove(filename)
     return new_filenames_per_platform
 
@@ -183,33 +180,33 @@ def main(
         if verbose: log_print(f"Request {i+1}/{len(keys)}: {filename}")
         projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
         
-        if verbose: log_print(f"Retrieve NEXRAD colocalizations")
+        if verbose > 1: log_print(f"Retrieve NEXRAD colocalizations")
         closest_station = get_closest_nexrad_station(polygon)
-        channel += closest_station[1:]
-        if verbose: log_print(f"Closest station is {closest_station}")
+        long_channel = channel + closest_station[1:]
+        if verbose > 1: log_print(f"Closest station is {closest_station}")
 
-        if verbose: log_print(f"Downloading")
+        if verbose > 1: log_print(f"Downloading")
         urls_per_platforms = get_bucket_urls(closest_station, requested_date, max_timedelta, time_step)
         filenames_per_platform = download_files(urls_per_platforms, closest=False)
         
-        if verbose: log_print("Extracting")
-        filenames_per_platform = untar(filenames_per_platform, channel)
+        if verbose > 1: log_print("Extracting")
+        filenames_per_platform = untar(filenames_per_platform, long_channel)
         if not filenames_per_platform[closest_station]:
-            if verbose: log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}")
+            if verbose > 1: log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}")
             return
             
         close_filenames_per_platform = restrict_filenames_from_date(filenames_per_platform)
         
-        if verbose: log_print("Project on S1 lat/lon grid")
+        if verbose > 1: log_print("Project on S1 lat/lon grid")
         closest_date = sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
-        lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=channel)
+        lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
 
         os.makedirs('outputs/' + filename, exist_ok=True)
-        save_reprojection(closest_station, channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
+        save_reprojection(closest_station, long_channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
         
         if create_gif:
-            if verbose: log_print(".gif generation is asked")
+            if verbose > 1: log_print(".gif generation is asked")
             generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read, download=False, delta_factor=delta_factor)
     if verbose: log_print("Done")
 

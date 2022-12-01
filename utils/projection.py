@@ -105,7 +105,7 @@ def generate_gif(iw_polygon, channel, urls_per_platforms, gif_filename, verbose,
     filenames_per_platform = download_files(urls_per_platforms, closest=False) if download else urls_per_platforms
     m = None
 
-    if verbose: log_print(f"Generate .png")
+    if verbose > 1: log_print(f"Generate .png")
     for platform in filenames_per_platform:
         png_filenames = []
         for date, filenames in filenames_per_platform[platform].items():

@@ -71,7 +71,7 @@ def routing(args, thread_limit=10, single_wait=0, verbose=1, time_limit=3600, ti
         time.sleep(time_sleep)
     except Exception as e:
         raise e
-    if verbose: print()
+    if verbose > 1: print()
 
     threads = [thread.join(timeout=time_limit) for thread in threads]
     return

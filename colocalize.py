@@ -9,7 +9,7 @@ np.seterr(all="ignore")
 import matplotlib
 #matplotlib.use('agg')
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -54,11 +54,11 @@ def main(
         if verbose: log_print(f"Request {i+1}/{len(keys)}: {filename}")
         projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
             
-        if verbose: log_print("Retrieve files urls")
+        if verbose > 1: log_print("Retrieve files urls")
         channel, platform, urls_per_platforms, (platform_lat, platform_lon, closest_file_data) = get_closest_filenames(channel, polygon, requested_date, max_timedelta, time_step, platforms)
-        if verbose: log_print(f"Selected plateform is {platform} with channel {channel}")
+        if verbose > 1: log_print(f"Selected plateform is {platform} with channel {channel}")
 
-        if verbose: log_print("Project on S1 lat/lon grid")
+        if verbose > 1: log_print("Project on S1 lat/lon grid")
         closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats, projection_lons)
         save_reprojection(platform, channel,closest_file_data, f'outputs/{filename}/{filename}_{channel}')
 

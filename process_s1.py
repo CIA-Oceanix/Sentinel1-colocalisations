@@ -35,36 +35,36 @@ def download_grd_from_asf(filename, username, password, folder=".temp"):
 def main(asf_username, asf_password, key, model, verbose=1):
     keys = get_keys(key)
     
-    if verbose: log_print(f"Build IW getter")
+    if verbose > 1: log_print(f"Build IW getter")
     getter = getter_polygon_from_key('IW')
     
 
-    if verbose: log_print("Search the zipnames using the getter")
+    if verbose > 1: log_print("Search the zipnames using the getter")
     zipnames = [getter(key)[0] + '.zip' for key in keys]
 
-    if verbose: log_print("Download the zipnames using ASF")
+    if verbose > 1: log_print("Download the zipnames using ASF")
     zip_filenames = [download_grd_from_asf(zipname, asf_username, asf_password) for zipname in zipnames]
 
-    if verbose: log_print("Unzip")
+    if verbose > 1: log_print("Unzip")
     unzipped_folders = []
     for filename in zip_filenames:
         with zipfile.ZipFile(filename, "r") as zip_ref:
             zip_ref.extractall(".temp")
         unzipped_folders.append(filename.replace('.zip', '.SAFE'))
 
-    if verbose: log_print("Generate the .tiff")
+    if verbose > 1: log_print("Generate the .tiff")
     tiff_filenames = []
     for folder in unzipped_folders:
         tiff_filenames += safe_to_tiff(folder, vh=False)
 
-    if verbose: log_print("Run the models")
+    if verbose > 1: log_print("Run the models")
     deep_learning_outputs = apply_on_keys(tiff_filenames, getter, model)
     for filename in tiff_filenames:
         key = os.path.split(filename)[1].split('-')[4]
         new_filename = f"outputs/{key}.tiff"
         shutil.copyfile(filename, new_filename)
 
-    if verbose: log_print("Done")
+    if verbose > 1: log_print("Done")
 
     
 if __name__ == '__main__':
