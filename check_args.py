@@ -1,22 +1,27 @@
 import os
-import numpy as np
 from datetime import datetime
 
-GOES_SERIE = ["goes16", "goes17", "goes18"]
-HIMAWARI_SERIE = ["himawari8", "himawari9"]
-NEXRAD_BASIS = ["nexrad-level2"]
-ERA5_PLATFORMS = ['era5']
-SATELLITE_PLATFORMS = GOES_SERIE + HIMAWARI_SERIE
+import numpy as np
 
-ABI_CHANNELS = ['C13', 'C14'] # C01 to C16 are available, but would need other cmap
-RRQPEF_CHANNELS = ['RRQPEF']
-GLM_CHANNELS = ['GLM']
-NEXRAD_L3_CHANNELS = [ 'DPR', 'N0Q', 'N0Q', 'N0M', 'N0H', 'HHC', 'N0Z']
+SATELLITE_PLATFORMS = {
+    'GOES': ["goes16", "goes17", "goes18"],
+    'HIMAWARI': ["himawari8", "himawari9"],
+    'SEVIRIS': ["EO:EUM:DAT:MSG:HRSEVIRI", "EO:EUM:DAT:MSG:HRSEVIRI-IODC"]
+}
+SATELLITE_PLATFORMS['any'] = [platform for l in SATELLITE_PLATFORMS.values() for platform in l]
+SATELLITE_PLATFORMS['GLM'] = SATELLITE_PLATFORMS['GOES']
+SATELLITE_PLATFORMS['ABI'] = SATELLITE_PLATFORMS['GOES'] + SATELLITE_PLATFORMS['HIMAWARI']
+SATELLITE_PLATFORMS['RRQPEF'] = SATELLITE_PLATFORMS['GOES'] + SATELLITE_PLATFORMS['HIMAWARI']
 
-ERA5_CHANNELS = ['northward_wind_at_10_metres', 'eastward_wind_at_10_metres']
 
-with open('res/nexrad_stations.txt', 'r') as file:
-    NEXRAD_CHANNELS = [line.split('\t')[1] for line in file.readlines()[1:]]
+CHANNELS = {
+    'ABI': ['C13', 'C14'],
+    'RRQPEF': 'RRQPEF',
+    'GLM': 'GLM',
+    'ERA5': ['northward_wind_at_10_metres', 'eastward_wind_at_10_metres'],
+    'NEXRAD_L2': "nexrad-level2",
+    'NEXRAD_L3': ['DPR', 'N0Q', 'N0Q', 'N0M', 'N0H', 'HHC', 'N0Z']
+}
 
 def get_keys(key):
     assert os.path.exists(key)
@@ -24,54 +29,47 @@ def get_keys(key):
         lines = file.readlines()
         keys = [line.replace('\n', '') for line in lines]
     return keys
-    
+
 
 def check_args(
-    sentinel1_key = None,
-    sentinel1_keys_filename = None,
-    requests_filename = None,
-    channel = None,
-    sensor_operational_mode = None,
-    platform_key = None,
-    max_timedelta = None,
-    time_step = None,
-    create_gif=None,
-    verbose=None,
-    delta_factor=None
-    ):
+        sentinel1_key=None,
+        sentinel1_keys_filename=None,
+        requests_filename=None,
+        channel=None,
+        sensor_operational_mode=None,
+        data=None,
+        max_timedelta=None,
+        time_step=None,
+        create_gif=None,
+        verbose=None,
+        delta_factor=None
+):
     from utils.sentinel1 import getter_polygon_from_key
     from utils.misc import log_print
 
     # Set default values
     if verbose is None: verbose = 2
     if requests_filename is None and sensor_operational_mode is None: sensor_operational_mode = 'IW'
-    
-    if max_timedelta is None: max_timedelta= 90
-    if time_step is None: time_step= 10
-    if delta_factor is None: delta_factor=2
-    
 
-    # Choose plateform
-    if platform_key == 'nexrad':
-        platforms = NEXRAD_BASIS
-    elif platform_key in ['abi', "rrqpef"]:
-        platforms = SATELLITE_PLATFORMS
-    elif platform_key in ['glm']:
-        platforms = GOES_SERIE
-    elif platform_key == 'era5':
-        platforms = ERA5_PLATFORMS
-    elif channel in NEXRAD_L3_CHANNELS:
-        platforms = 'nexrad-level3'
+    if max_timedelta is None: max_timedelta = 90
+    if time_step is None: time_step = 10
+    if delta_factor is None: delta_factor = 2
+
+    # Choose plateform/channels
+    if data in ['ABI', "RRQPEF", 'GLM']:
+        platforms = SATELLITE_PLATFORMS[data]
     else:
-        raise ValueError
+        platforms = [data]
+    if isinstance(CHANNELS[data], list):
+        assert channel in CHANNELS[data]
+    else:
+        channel = CHANNELS[data]
 
-    if platform_key == "glm": channel = "GLM"
-    if platform_key == "rrqpef": channel = "RRQPEF"
 
     # Format the requests
     requests = []
     if sentinel1_key or sentinel1_keys_filename:
-        if verbose > 1: log_print(f"Build {sensor_operational_mode} getter")
+        log_print(f"Build {sensor_operational_mode} getter", 2, verbose)
         getter = getter_polygon_from_key(sensor_operational_mode)
 
         keys = get_keys(sentinel1_keys_filename) if sentinel1_keys_filename else [sentinel1_key]
@@ -91,7 +89,5 @@ def check_args(
                 [lon4, lat4],
             ]).astype('float')
             requests.append((key, requested_datetime, polygon))
-            
 
-    return requests, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step, delta_factor
-    
+    return requests, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor

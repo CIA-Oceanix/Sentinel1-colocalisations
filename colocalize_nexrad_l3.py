@@ -1,25 +1,25 @@
-import shutup; shutup.please()
+import shutup
 
+shutup.please()
 
 import os
 import fire
-import shutil
 import tarfile
-import zlib
 
 import numpy as np
+
 np.seterr(all="ignore")
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import lru_cache
 
 import matplotlib
-import matplotlib.pyplot as plt
+
 matplotlib.use('agg')
 
-from metpy.cbook import get_test_data
 from metpy.io import Level3File
 import pyproj
+
 WGS84 = pyproj.Geod(ellps='WGS84')
 
 from utils.misc import log_print
@@ -31,10 +31,10 @@ from utils.nexrad_l3 import read_melting_layer
 
 from check_args import check_args
 
-
-shutil.rmtree('.temp', ignore_errors=True)
+#shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
+
 
 # 'DPR': 'Digital Instantaneous Precipitation Rate'
 # 'NYQ': 'Base Reflectivity Data Array'
@@ -44,9 +44,10 @@ os.makedirs('outputs', exist_ok=True)
 # 'NXH': 'Digital Hydrometeor Classification'
 # 'HHC': 'Hybrid Hydrometeor Classification'
 
-@lru_cache(maxsize=2**16)
+@lru_cache(maxsize=2 ** 16)
 def cached_command(command):
     return os.popen(command).readlines()
+
 
 def get_urls(channel, date):
     urls = []
@@ -58,18 +59,20 @@ def get_urls(channel, date):
             urls.append(line.split()[-1])
     return urls
 
+
 def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step):
-    time_steps = range(-max_timedelta, max_timedelta+1, time_step)
+    time_steps = range(-max_timedelta, max_timedelta + 1, time_step)
     dates = [iw_datetime + timedelta(minutes=x) for x in time_steps]
-    
+
     urls = {channel: {}}
     for date in dates:
         urls[channel][date] = get_urls(channel, date)
     return urls
 
+
 def untar(filenames_per_platform, channel):
     new_filenames_per_platform = {}
-    
+
     for platform in filenames_per_platform:
         extracted = {}
         new_filenames_per_platform[platform] = {}
@@ -79,7 +82,7 @@ def untar(filenames_per_platform, channel):
                 if filename in extracted:
                     new_filenames_per_platform[platform][date] += extracted[filename]
                     continue
-                    
+
                 with tarfile.open(filename) as file:
                     folder = os.path.split(filename)[0]
                     for i, compressed_filename in enumerate(file.getnames()):
@@ -89,126 +92,114 @@ def untar(filenames_per_platform, channel):
                                 file.extract(compressed_filename, folder)
                             new_filenames_per_platform[platform][date].append(new_filename)
                 extracted[filename] = new_filenames_per_platform[platform][date]
-                #os.remove(filename)
+                os.remove(filename)
     return new_filenames_per_platform
 
 
 def read(filenames, platform=None, channel=None, requested_date=None):
-    radar =  Level3File(filenames[0])
+    radar = Level3File(filenames[0])
 
     if channel[:3] in ["N0M", "N1M", "N2M", "N3M"]:
         return read_melting_layer(radar)
-        
+
     datadict = radar.sym_block[0][0]
-        
+
     if 'latitude' in datadict:
         width = 0.25
         lat = datadict['latitude']
         lon = datadict['longitude']
         radials = datadict['components'].radials
-        
+
         azimuths = np.array([radial.azimuth for radial in radials])
-        ranges = np.array([i*width for i in range(radials[0].num_bins)])
+        ranges = np.array([i * width for i in range(radials[0].num_bins)])
         data = np.array([radial.data for radial in radials])
     else:
         lon = radar.lon
-        lat = radar.lat 
-        
+        lat = radar.lat
+
         azimuths = np.array(datadict['start_az'] + [datadict['end_az'][-1]])
         data = radar.map_data(datadict['data'])
-        if channel[:3] in ['DPR']: data = data / 1000 * 25.4 # milipouce/h to mm/h
+        if channel[:3] in ['DPR']: data = data / 1000 * 25.4  # milipouce/h to mm/h
 
-        
         ranges = np.linspace(0, radar.max_range, data.shape[-1] + 1)
 
     range_grid, azimuth_grid = np.meshgrid(ranges, azimuths)
     lons, lats, _ = WGS84.fwd(
-        np.ones(azimuth_grid.shape)*lon,
-        np.ones(azimuth_grid.shape)*lat,
+        np.ones(azimuth_grid.shape) * lon,
+        np.ones(azimuth_grid.shape) * lat,
         azimuth_grid,
-        range_grid*1000
+        range_grid * 1000
     )
-    
-    if lons.shape[0] == data.shape[0] +1:
+
+    if lons.shape[0] == data.shape[0] + 1:
         lats = lats[:-1]
         lons = lons[:-1]
-    if lons.shape[1] == data.shape[1] +1:
-        lats = lats[:,:-1]
-        lons = lons[:,:-1]
+    if lons.shape[1] == data.shape[1] + 1:
+        lats = lats[:, :-1]
+        lons = lons[:, :-1]
     return lats, lons, data
 
-def restrict_filenames_from_date(filenames_per_platform):
-    for platform in filenames_per_platform:
-        for date, filenames in filenames_per_platform[platform].items():
-            smallest_timedelta = None
-            for filename in filenames:
-                filename_date = datetime.strptime(filename.split('_')[-1], '%Y%m%d%H%M')
-                current_timedelta = abs(filename_date - date)
-                if smallest_timedelta is None or current_timedelta < smallest_timedelta:
-                    filenames_per_platform[platform][date] = [filename]
-                    smallest_timedelta = current_timedelta
-    return filenames_per_platform
-    
+
 def main(
-    sentinel1_key = None,
-    sentinel1_keys_filename = None,
-    requests_filename = None,
-    channel = 'DPR',
-    sensor_operational_mode = None,
-    platform_key = None,
-    max_timedelta = None,
-    time_step = 5,
-    create_gif = None,
-    verbose = None,
-    delta_factor=None):
-        
-    keys, channel, verbose, sensor_operational_mode, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
-        sentinel1_key = sentinel1_key,
-        sentinel1_keys_filename = sentinel1_keys_filename,
-        requests_filename = requests_filename,
-        channel = channel,
-        sensor_operational_mode = sensor_operational_mode,
-        platform_key = platform_key,
-        max_timedelta = max_timedelta,
-        time_step = time_step,
-        create_gif = create_gif,
-        verbose = verbose,
+        sentinel1_key=None,
+        sentinel1_keys_filename=None,
+        requests_filename=None,
+        sensor_operational_mode=None,
+        data='NEXRAD_L3',
+        channel=None,
+        max_timedelta=None,
+        time_step=5,
+        create_gif=None,
+        verbose=None,
+        delta_factor=None):
+    keys, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
+        sentinel1_key=sentinel1_key,
+        sentinel1_keys_filename=sentinel1_keys_filename,
+        requests_filename=requests_filename,
+        channel=channel,
+        sensor_operational_mode=sensor_operational_mode,
+        data=data,
+        max_timedelta=max_timedelta,
+        time_step=time_step,
+        create_gif=create_gif,
+        verbose=verbose,
         delta_factor=delta_factor
     )
-    
+
     for i, (filename, requested_date, polygon) in enumerate(keys):
-        if verbose: log_print(f"Request {i+1}/{len(keys)}: {filename}")
+        log_print(f"Request {i + 1}/{len(keys)}: {filename}", 1, verbose)
         projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
-        
-        if verbose > 1: log_print(f"Retrieve NEXRAD colocalizations")
+
+        log_print(f"Retrieve NEXRAD colocalizations", 2, verbose)
         closest_station = get_closest_nexrad_station(polygon)
         long_channel = channel + closest_station[1:]
-        if verbose > 1: log_print(f"Closest station is {closest_station}")
+        log_print(f"Closest station is {closest_station}", 2, verbose)
 
-        if verbose > 1: log_print(f"Downloading")
+        log_print(f"Downloading", 2, verbose)
         urls_per_platforms = get_bucket_urls(closest_station, requested_date, max_timedelta, time_step)
         filenames_per_platform = download_files(urls_per_platforms, closest=False)
-        
-        if verbose > 1: log_print("Extracting")
+
+        log_print("Extracting", 2, verbose)
         filenames_per_platform = untar(filenames_per_platform, long_channel)
         if not filenames_per_platform[closest_station]:
-            if verbose > 1: log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}")
-            return
-            
-        close_filenames_per_platform = restrict_filenames_from_date(filenames_per_platform)
-        
-        if verbose > 1: log_print("Project on S1 lat/lon grid")
-        closest_date = sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
+            log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}", 1, verbose)
+            continue
+
+        log_print("Project on S1 lat/lon grid", 2, verbose)
+        closest_date = \
+        sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
         lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
 
         os.makedirs('outputs/' + filename, exist_ok=True)
         save_reprojection(closest_station, long_channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
-        
+
         if create_gif:
-            if verbose > 1: log_print(".gif generation is asked")
-            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif', verbose, read, download=False, delta_factor=delta_factor)
-    if verbose: log_print("Done")
+            log_print(".gif generation is asked", 2, verbose)
+            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif',
+                         verbose, read, download=False, delta_factor=delta_factor)
+    log_print("Done", 1, verbose)
+
 
 if __name__ == "__main__":
     fire.Fire(main)

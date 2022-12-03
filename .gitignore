@@ -1,6 +1,8 @@
 .temp
 outputs
 .ipynb_checkpoints
+.idea
 __pycache__
 logs.json
-test/*
+test
+logins.py
