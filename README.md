@@ -22,7 +22,7 @@
 Link to notebooks presenting colocations with Sentinel-1:
 
 - [NEXRAD L2 Reflectivity](readme/readme_nexrad.ipynb)
-- NEXRAD L3 [Part A](readme/readme_nexrad_l3A.ipynb)/[Part B](readme/readme_nexrad_l3B.ipynb)
+- [NEXRAD L3 DPR/N0M/N0H](readme/readme_nexrad_l3.ipynb)
 - [GOES16/17/18 & Himawari 8/9 ABI L2](readme/readme_abi.ipynb)
 - [MSG 1&2 SEVIRIS 10.8 µm](readme/readme_seviris.ipynb)
 - [ERA5](readme/readme_era5.ipynb)
@@ -64,6 +64,17 @@ python colocalize.py 20210913t092920 --data ABI --channel C14 --create_gif True
 ## GOES16/17/18 & Himawari 8/9 RRQPEF L2
 
 ```
+with open('seviris.txt', 'w') as file:
+    file.write('test\t20210105T010101\t40.6\t7.6\t40.6\t10.3\t42.5\t10.3\t42.5\t7.6')
+
+python colocalize_seviris.py --requests_filename seviris.txt --create_gif True
+```
+
+![20200827t000933_RRQPEF.gif](readme/test_EUM.gif)
+
+## MSG Seviris
+
+```
 python colocalize.py 20210913t092920 --data RRQPEF --create_gif True
 ```
 
@@ -98,14 +109,14 @@ python colocalize_s3.py 20180117T180947
 ## Sentinel1 Deep Learning Models
 
 ```
-! python process_s1.py "20170108t015819" NEXRAD
+! python process_s1.py 20170108t015819 NEXRAD
 ```
 
 ![20170108t015819.png](readme/20170108t015819.png)
 ![DL_NEXRAD.png](readme/DL_NEXRAD.png)
 
 ```
-! python process_s1.py "20180117t180947" BiologicalSlicks
+! python process_s1.py 20180117t180947 BiologicalSlicks
 ```
 
 ![20180117t180947.png](readme/20180117t180947.png)
@@ -132,6 +143,8 @@ os.system("python colocalize.py --requests_filename foo.txt --data ERA5 --channe
 ```
 will create collocations between NEXRAD and ERA5 on a square centered on KBYX.
 
+Collocation with Sentinel3 only supports collocation with either a single ISO datetime or a filename containing them. In both cases, they are the first argument. Same for deep learning models.
+
 ## Arguments for the sensor selection
 
 This repo support collocations with the geostationnary satellites GOES (16 to 18), Himawari (8 & 9) and MSG. For the two formers, ABI 1 to 16 could be selected, by we are personnaly using only 13 & 14. To support them, add them in `check_args.py` in `CHANNELS['ABI']` and add colormap parameters (name, vmin and vmax) in the `platform_cmap_args` function of `utils/misc.py`.
@@ -147,7 +160,7 @@ NEXRAD collocations can be obtained by either the `colocalize.py` (for the L2 pr
 - NXH: Digital Hydrometeor Classification
 - HHC: Hybrid Hydrometeor Classification
 
-Sentinel3 OLCI collocations can be obtained by `colocalize_s3.py`. This one only require a SAR ISO datetime and will search and plot the Sentinel3 on the same zone in a timeframe of +- 24h.
+Sentinel3 OLCI "chl_oc4me" collocations can be obtained by `colocalize_s3.py`. This one only require a SAR ISO datetime and will search and plot the Sentinel3 on the same zone in a timeframe of +- 24h.
 
 The notebooks should cover most use cases, check them to see which lib to install.
 

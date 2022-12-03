@@ -20,7 +20,8 @@ CHANNELS = {
     'GLM': 'GLM',
     'ERA5': ['northward_wind_at_10_metres', 'eastward_wind_at_10_metres'],
     'NEXRAD_L2': "nexrad-level2",
-    'NEXRAD_L3': ['DPR', 'N0Q', 'N0Q', 'N0M', 'N0H', 'HHC', 'N0Z']
+    'NEXRAD_L3': ['DPR', 'N0Q', 'N0Q', 'N0M', 'N0H', 'HHC', 'N0Z'],
+    'SEVIRIS': "HRSEVIRI"
 }
 
 def get_keys(key):

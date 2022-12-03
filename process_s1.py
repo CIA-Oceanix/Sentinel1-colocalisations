@@ -31,7 +31,8 @@ def download_grd_from_asf(filename, folder=".temp"):
 
 
 def main(key, model, verbose=1):
-    keys = get_keys(key)
+    if len(key) == 15: keys = [key]
+    else: keys = get_keys(key)
 
     log_print(f"Build IW getter", 2, verbose)
     getter = getter_polygon_from_key('IW')
