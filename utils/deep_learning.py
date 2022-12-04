@@ -83,7 +83,7 @@ def apply_on_keys(filenames, getter, model_key):
         polygon = getter(key)[1]
         lat_grid, lon_grid = get_iw_latlon(polygon=polygon)
         mask = globe.is_land(lat_grid, lon_grid)
-        mask = cv2.resize(mask, output.shape[:2][::-1])
+        mask = cv2.resize(mask, output.shape[:2][::-1]).astype(np.uint8)
 
         output[:, :, 3] = np.where(mask > 0.5, 0, 1)
         output = (np.clip(output, 0, 1) * (2 ** 8 - 1)).astype('uint8')

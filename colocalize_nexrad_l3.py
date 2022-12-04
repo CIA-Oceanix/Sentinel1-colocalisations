@@ -10,7 +10,7 @@ import numpy as np
 
 np.seterr(all="ignore")
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import lru_cache
 
 import matplotlib
@@ -97,7 +97,15 @@ def untar(filenames_per_platform, channel):
 
 
 def read(filenames, platform=None, channel=None, requested_date=None):
-    radar = Level3File(filenames[0])
+    smallest_timedelta = None
+    for filename in filenames:
+        filename_datetime = datetime.strptime(filename.split('_')[-1], '%Y%m%d%H%M')
+        current_timedelta = abs(requested_date - filename_datetime)
+        if smallest_timedelta is None or current_timedelta < smallest_timedelta:
+            closest_filename = filename
+            smallest_timedelta = current_timedelta
+
+    radar = Level3File(closest_filename)
 
     if channel[:3] in ["N0M", "N1M", "N2M", "N3M"]:
         return read_melting_layer(radar)
@@ -188,7 +196,7 @@ def main(
         log_print("Project on S1 lat/lon grid", 2, verbose)
         closest_date = \
         sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
-        lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel)
+        lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel, requested_date=closest_date)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
 
         os.makedirs('outputs/' + filename, exist_ok=True)

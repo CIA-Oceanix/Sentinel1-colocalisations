@@ -8,6 +8,7 @@
     3. [GOES16/17/18 & Himawari 8/9 ABI L2](#goes16/17/18-&-himawari-8/9-abi-l2)
     4. [GOES16/17/18 & Himawari 8/9 RRQPEF L2](#goes16/17/18-&-himawari-8/9-rrqpef-l2)
     5. [GOES16/17/28 GLM L2 Events](#goes16/17/18-glm-g2-events)
+    6. [MSG Seviris](#msg-seviris)
     6. [ERA5 Wind Speed](#era5-wind-speed)
     7. [Sentinel3 A/B OLCI](#sentinel3-a/b-olci)
     8. [Sentinel1 Deep Learning Models](#sentinel1-deep-learning-models)
@@ -61,18 +62,9 @@ python colocalize.py 20210913t092920 --data ABI --channel C14 --create_gif True
 ![20210913t092920_C14.gif](readme/20210913t092920_C14.gif)
 
 
-## GOES16/17/18 & Himawari 8/9 RRQPEF L2
-
-```
-with open('seviris.txt', 'w') as file:
-    file.write('test\t20210105T010101\t40.6\t7.6\t40.6\t10.3\t42.5\t10.3\t42.5\t7.6')
-
-python colocalize_seviris.py --requests_filename seviris.txt --create_gif True
-```
-
 ![20200827t000933_RRQPEF.gif](readme/test_EUM.gif)
 
-## MSG Seviris
+## GOES16/17/18 & Himawari 8/9 RRQPEF L2
 
 ```
 python colocalize.py 20210913t092920 --data RRQPEF --create_gif True
@@ -88,6 +80,15 @@ python colocalize.py 20200827t000933 --data GLM --create_gif True
 ```
 
 ![20200827t000933_GLM.gif](readme/20200827t000933_GLM.gif)
+
+## MSG Seviris
+
+```
+with open('seviris.txt', 'w') as file:
+    file.write('test\t20210105T010101\t40.6\t7.6\t40.6\t10.3\t42.5\t10.3\t42.5\t7.6')
+
+python colocalize_seviris.py --requests_filename seviris.txt --create_gif True
+```
 
 
 ## ERA5 Wind Speed
