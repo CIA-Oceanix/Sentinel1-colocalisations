@@ -32,13 +32,12 @@ def download_file(url, folder=None):
     if folder is None:
         url, folder = url
 
-    filename = os.path.join(folder, url[6:].replace('/', '_'))
+    filename = os.path.join(folder, url[6:].replace('/', '_').split('?')[0])
 
     if os.path.exists(filename): return filename
     os.makedirs(os.path.split(filename)[0], exist_ok=True)
 
     if url.startswith('gs:'):
-        print(f"\ngsutil cp {url} {folder}\n")
         os.system(f"gsutil cp {url} {folder}")
         os.rename(os.path.join(folder, os.path.split(url)[1]), filename)
     else:

@@ -20,6 +20,8 @@ for command in (
 
     "python process_s1.py 20170108t015819 NEXRAD             > test/15.NEXRAD.txt",
     "python process_s1.py 20180117t180947 BiologicalSlicks   > test/16.BiologicalSlicks.txt",
+
+    "python colocalize_seviris.py --requests_filename seviris.txt --create_gif True"
     ):
     log_print(command, 0, 1)
     os.system(command)

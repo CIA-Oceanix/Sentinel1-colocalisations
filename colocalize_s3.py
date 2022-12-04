@@ -75,32 +75,27 @@ def get_download_args(key, polygon):
 
 
 def unzip(filename):
-    root, short_filename = os.path.split(filename)
-    key = short_filename.split('_')[7]
-
-    new_folder = os.path.join(root, key)
-    os.makedirs(new_folder, exist_ok=True)
-
     try:
         with zipfile.ZipFile(filename, "r") as zip_ref:
-            zip_ref.extract(short_filename[:-4] + "/chl_oc4me.nc", new_folder)
-            zip_ref.extract(short_filename[:-4] + "/geo_coordinates.nc", new_folder)
+            product = zip_ref.namelist()[0]
+            zip_ref.extract(product + "chl_oc4me.nc", '.temp')
+            zip_ref.extract(product + "geo_coordinates.nc", '.temp')
     except zipfile.BadZipFile:
-        print('BadZipFile on', short_filename)
+        print('BadZipFile on', filename)
 
     """try: os.remove(filename)
     except PermissionError: pass"""
 
-    return os.path.join(new_folder, short_filename[:-4])
+    return product
 
 
 def draw_s3_on_map(folder, iw_polygon, lat_grid, lon_grid, m, filename):
-    with Dataset(folder + "/chl_oc4me.nc") as dataset:
+    with Dataset(folder + "chl_oc4me.nc") as dataset:
         data = dataset[CHANNEL]
         data = 10 ** (data[:] * data.scale_factor + data.add_offset)
         data = data.filled(np.nan)
 
-    with Dataset(folder + "/geo_coordinates.nc") as dataset:
+    with Dataset(folder + "geo_coordinates.nc") as dataset:
         platform_lat = dataset['latitude'][:]
         platform_lon = dataset['longitude'][:]
 
@@ -129,8 +124,9 @@ def project_s3_data(data, iw_polygon):
     return new_data
 
 
-def main(key, verbose=1, sensor_operational_mode="IW"):
-    keys = get_keys(key)
+def main(key, verbose=2, sensor_operational_mode="IW"):
+    if len(key) == 15: keys = [key]
+    else: keys = get_keys(key)
 
     log_print(f"Build {sensor_operational_mode} getter", 2, verbose)
     getter = getter_polygon_from_key(sensor_operational_mode)
@@ -147,22 +143,22 @@ def main(key, verbose=1, sensor_operational_mode="IW"):
         lat_grid, lon_grid = increased_grid(iw_polygon, km_per_pixel=1, delta_factor=2)
 
         log_print(f"Download Sentinel3 collocations", 2, verbose)
-        args = [(url, f".temp/{key}//{filename}") for filename, url in collocations]
+        args = [(url, ".temp") for _, url in collocations]
 
         routing(args, thread_limit=4)
 
         log_print(f"Unzip Sentinel3 collocations", 2, verbose)
-        new_folders = [unzip(filename) for url, filename in args]
+        new_folders = [unzip(os.path.join(folder, url[6:].replace('/', '_').split('?')[0])) for url, folder in args]
 
         log_print(f"Draw Sentinel3 around the Sentinel1 observation", 2, verbose)
         m = None
 
         datas = []
         for folder in new_folders:
-            s3_time = datetime.strptime(os.path.split(folder)[1].split('_')[7].lower(), '%Y%m%dt%H%M%S')
-            filename = f"outputs/{os.path.split(folder[6:])[0]}.png"
+            s3_time = datetime.strptime(folder.split('_')[-9].lower(), '%Y%m%dt%H%M%S')
+            filename = f"outputs/{key}/{folder.split('_')[-9]}.png"
 
-            m, (platform_lat, platform_lon, data) = draw_s3_on_map(folder, iw_polygon, lat_grid, lon_grid, m, filename)
+            m, (platform_lat, platform_lon, data) = draw_s3_on_map(".temp/" + folder, iw_polygon, lat_grid, lon_grid, m, filename)
             datas.append((abs(s1_time - s3_time), platform_lat, platform_lon, data))
 
         log_print(f"Project Sentinel3 on Sentinel1 grid", 2, verbose)
