@@ -31,6 +31,6 @@ def getter_polygon_from_key(sensor_operational_mode='IW', polarisation_mode='VV'
                 products[key] = (filename, polygon, orbit_direction)
 
     def get_polygon_from_key(key):
-        return products[key]
+        return products.get(key)
 
     return get_polygon_from_key

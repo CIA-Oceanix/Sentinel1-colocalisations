@@ -58,7 +58,7 @@ def get_download_args(key, polygon):
     geometry = f"POLYGON(({polygon[0, 0]}+{polygon[0, 1]}%2C{polygon[1, 0]}+{polygon[1, 1]}%2C{polygon[2, 0]}+" \
                + f"{polygon[2, 1]}%2C{polygon[3, 0]}+{polygon[3, 1]}%2C{polygon[0, 0]}+{polygon[0, 1]}))"
     url = "https://finder.creodias.eu/resto/api/collections/Sentinel3/search.json?maxRecords=10&" \
-          + f"startDate={start_date}&completionDate={completion_date}&instrument=OL&processingLevel=LEVEL2&productType=WFR&" \
+          + f"startDate={start_date}&completionDate={completion_date}&instrument=OL&processingLevel=LEVEL2&productType=OL_2_WFR___&" \
           + f"geometry={geometry}&sortParam=startDate&sortOrder=descending&status=all&dataset=ESA-DATASET"
 
     r = requests.get(url)
@@ -83,8 +83,8 @@ def unzip(filename):
     except zipfile.BadZipFile:
         print('BadZipFile on', filename)
 
-    """try: os.remove(filename)
-    except PermissionError: pass"""
+    try: os.remove(filename)
+    except PermissionError: pass
 
     return product
 
@@ -99,8 +99,7 @@ def draw_s3_on_map(folder, iw_polygon, lat_grid, lon_grid, m, filename):
         platform_lat = dataset['latitude'][:]
         platform_lon = dataset['longitude'][:]
 
-    m = plot_on_map(PLATFORM, CHANNEL, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=m,
-                    polygon=iw_polygon)
+    m = plot_on_map(PLATFORM, CHANNEL, data, platform_lat, platform_lon, lat_grid, lon_grid, filename, m=m, polygon=iw_polygon)
     return m, (platform_lat, platform_lon, data)
 
 

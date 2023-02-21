@@ -18,9 +18,11 @@ def trim(data, platform_lat, platform_lon, owi_lat, owi_lon):
 
     x1, y1 = arg2d(get_distance(platform_lat, platform_lon, np.nanmax(owi_lat), np.nanmax(owi_lon)))
     x2, y2 = arg2d(get_distance(platform_lat, platform_lon, np.nanmin(owi_lat), np.nanmin(owi_lon)))
+    x3, y3 = arg2d(get_distance(platform_lat, platform_lon, np.nanmax(owi_lat), np.nanmin(owi_lon)))
+    x4, y4 = arg2d(get_distance(platform_lat, platform_lon, np.nanmin(owi_lat), np.nanmax(owi_lon)))
 
-    x1, x2 = min(x1, x2), max(x1, x2)
-    y1, y2 = min(y1, y2), max(y1, y2)
+    x1, x2 = min((x1, x2, x3, x4)), max((x1, x2, x3, x4))
+    y1, y2 = min((y1, y2, y3, y4)), max((y1, y2, y3, y4))
 
     platform_lat = platform_lat[x1:x2, y1:y2]
     platform_lon = platform_lon[x1:x2, y1:y2]

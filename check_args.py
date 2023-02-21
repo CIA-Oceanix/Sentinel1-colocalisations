@@ -75,7 +75,9 @@ def check_args(
 
         keys = get_keys(sentinel1_keys_filename) if sentinel1_keys_filename else [sentinel1_key]
         for key in keys:
-            iw_filename, iw_polygon = getter(key)[:2]
+            res = getter(key.lower())
+            if res is None: continue
+            iw_filename, iw_polygon = res[:2]
             iw_datetime = datetime.strptime(key, '%Y%m%dt%H%M%S')
             requests.append((key, iw_datetime, iw_polygon))
     else:

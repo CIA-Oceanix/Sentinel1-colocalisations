@@ -2,12 +2,12 @@ import os
 from utils.misc import log_print
 
 for command in (
-    "python colocalize.py    20170108t015819 --data NEXRAD_L2 --create_gif True           > test/01.NEXRAD.txt",
-    "python colocalize.py    20200827t000933 --data ABI --channel C14 --create_gif True   > test/02.ABI_GOES.txt",
-    "python colocalize.py    20210913t092920 --data ABI --channel C14 --create_gif True   > test/03.ABI_HIMAWARI.txt",
-    "python colocalize.py    20200827t000933 --data RRQPEF --create_gif True              > test/04.RRQPEF_GOES.txt",
-    "python colocalize.py    20210913t092920 --data RRQPEF --create_gif True              > test/05.RRQPEF_HIMAWARI.txt",
-    "python colocalize.py    20200827t000933 --data GLM --create_gif True                 > test/06.GLM.txt",
+    "python colocalize.py --sentinel1_key 20170108t015819 --data NEXRAD_L2 --create_gif True           > test/01.NEXRAD.txt",
+    "python colocalize.py --sentinel1_key 20200827t000933 --data ABI --channel C14 --create_gif True   > test/02.ABI_GOES.txt",
+    "python colocalize.py --sentinel1_key 20210913t092920 --data ABI --channel C14 --create_gif True   > test/03.ABI_HIMAWARI.txt",
+    "python colocalize.py --sentinel1_key 20200827t000933 --data RRQPEF --create_gif True              > test/04.RRQPEF_GOES.txt",
+    "python colocalize.py --sentinel1_key 20210913t092920 --data RRQPEF --create_gif True              > test/05.RRQPEF_HIMAWARI.txt",
+    "python colocalize.py --sentinel1_key 20200827t000933 --data GLM --create_gif True                 > test/06.GLM.txt",
     "python colocalize_nexrad_l3.py 20170108t015819 --channel DPR --create_gif True       > test/07.DPR.txt",
     "python colocalize_nexrad_l3.py 20170108t015819 --channel N0M --create_gif True       > test/08.N0M.txt",
     "python colocalize_nexrad_l3.py 20170108t015819 --channel N0H --create_gif True       > test/09.N0H.txt",

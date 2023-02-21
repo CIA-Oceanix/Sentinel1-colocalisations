@@ -93,13 +93,15 @@ def main(
         sentinel1_keys_filename=None,
         requests_filename='seviris.txt',
         channel=None,
-        sensor_operational_mode=None,
+        sensor_operational_mode='IW',
         data='SEVIRIS',
         max_timedelta=90,
         time_step=15,
         create_gif=True,
         verbose=None,
-        delta_factor=None):
+        delta_factor=None,
+        continue_on_error=False
+        ):
     keys, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
         sentinel1_key=sentinel1_key,
         sentinel1_keys_filename=sentinel1_keys_filename,
@@ -114,31 +116,38 @@ def main(
         delta_factor=delta_factor
     )
     for i, (filename, requested_date, polygon) in enumerate(keys):
-        log_print(f"Request {i + 1}/{len(keys)}: {filename}", 1, verbose)
-        projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
+        try:
+            log_print(f"Request {i + 1}/{len(keys)}: {filename}", 1, verbose)
+            projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
 
-        log_print("Retrieve products", 2, verbose)
-        platform, products, closest_product = get_closest_products(polygon, requested_date, max_timedelta, time_step)
+            log_print("Retrieve products", 2, verbose)
+            platform, products, closest_product = get_closest_products(polygon, requested_date, max_timedelta, time_step)
 
-        log_print(f"Read closest data from {platform}", 2, verbose)
-        closest_filename = download_product(closest_product)
-        platform_lat, platform_lon, closest_file_data = read_products([closest_filename])
+            log_print(f"Read closest data from {platform}", 2, verbose)
+            closest_filename = download_product(closest_product)
+            platform_lat, platform_lon, closest_file_data = read_products([closest_filename])
 
-        log_print("Project on S1 lat/lon grid", 2, verbose)
-        closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats,
-                                      projection_lons)
-        save_reprojection(platform, channel, closest_file_data,
-                          f'outputs/{filename}/{filename}_{platform.split(":")[1]}')
+            log_print("Project on S1 lat/lon grid", 2, verbose)
+            closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats,
+                                          projection_lons)
+            save_reprojection(platform, channel, closest_file_data,
+                              f'outputs/{filename}/{filename}_{platform.split(":")[1]}')
 
-        if create_gif:
-            log_print(".gif generation is asked", 2, verbose)
-            for date in products[platform]:
-                products[platform][date] = [download_product(products[platform][date])]
-            gif_filename = f'outputs/{filename}/{filename}_{platform.split(":")[1]}.gif'
-            generate_gif(
-                polygon, channel, products, gif_filename, verbose, read_products, delta_factor=delta_factor,
-                download=False
-            )
+            if create_gif:
+                log_print(".gif generation is asked", 2, verbose)
+                for date in products[platform]:
+                    products[platform][date] = [download_product(products[platform][date])]
+                gif_filename = f'outputs/{filename}/{filename}_{platform.split(":")[1]}.gif'
+                generate_gif(
+                    polygon, channel, products, gif_filename, verbose, read_products, delta_factor=delta_factor,
+                    download=False
+                )
+        except Exception as e:
+            log_print(f'Exception on request {filename}: {e}', 0, verbose)
+            if continue_on_error:
+                continue
+            else:
+                raise e
     log_print("Done", 1, verbose)
 
 
