@@ -1,0 +1,15 @@
+netCDF4
+numpy
+python-dateutil
+requests
+matplotlib
+utm
+basemap
+scikit-image
+Pillow
+scipy
+fire
+metpy
+pyproj
+eumdac
+satpy
