@@ -18,13 +18,13 @@ import pyproj
 
 WGS84 = pyproj.Geod(ellps='WGS84')
 
-from package_utils.misc import log_print
-from package_utils.download import download_files
-from package_utils.sentinel1 import get_iw_latlon
-from package_utils.closest_data import get_closest_nexrad_station
-from package_utils.projection import save_reprojection, reproject, generate_gif
-from package_utils.nexrad_l3 import read_melting_layer
-from package_utils.check_args import check_args
+from colocalisations.package_utils.misc import log_print
+from colocalisations.package_utils import download_files
+from colocalisations.package_utils.sentinel1 import get_iw_latlon
+from colocalisations.package_utils.closest_data import get_closest_nexrad_station
+from colocalisations.package_utils.projection import save_reprojection, reproject, generate_gif
+from colocalisations.package_utils import read_melting_layer
+from colocalisations.package_utils.check_args import check_args
 
 # shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
@@ -156,7 +156,7 @@ def main(
         channel=None,
         max_timedelta=None,
         time_step=5,
-        create_gif=None,
+        create_gif=False,
         verbose=None,
         delta_factor=None):
     keys, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(

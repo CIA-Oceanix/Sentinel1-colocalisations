@@ -11,10 +11,10 @@ np.seterr(all="ignore")
 import eumdac
 from satpy import Scene
 
-from package_utils.sentinel1 import get_iw_latlon
-from package_utils.projection import reproject, save_reprojection, generate_gif
-from package_utils.misc import log_print
-from package_utils.check_args import check_args
+from colocalisations.package_utils.sentinel1 import get_iw_latlon
+from colocalisations.package_utils.projection import reproject, save_reprojection, generate_gif
+from colocalisations.package_utils.misc import log_print, lat_lon_from_polygon
+from colocalisations.package_utils.check_args import check_args
 
 # shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
@@ -57,7 +57,6 @@ def get_product_by_date(platform, requested_datetime, max_timedelta, time_step):
         smallest_timedelta = None
         for product in collection.search(dtstart=start, dtend=end):
             observation_date = product.sensing_start + (product.sensing_end - product.sensing_start) / 2
-
             current_timedelta = abs(date - observation_date)
             if smallest_timedelta is None or current_timedelta < smallest_timedelta:
                 products[platform][date] = product
@@ -65,7 +64,8 @@ def get_product_by_date(platform, requested_datetime, max_timedelta, time_step):
 
 
 def get_closest_products(polygon, requested_date, max_timedelta, time_step):
-    mean_iw_lon = np.mean(polygon[:, 0])
+    lats, lons = lat_lon_from_polygon(polygon)
+    mean_iw_lon = np.mean(lons)
 
     platform = None
     if 22.75 < mean_iw_lon < 120 and requested_date > datetime(year=2017, month=2, day=2):
@@ -95,7 +95,7 @@ def main(
         data='SEVIRIS',
         max_timedelta=90,
         time_step=15,
-        create_gif=True,
+        create_gif=False,
         verbose=None,
         delta_factor=None,
         continue_on_error=False

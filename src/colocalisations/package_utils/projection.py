@@ -60,11 +60,12 @@ def save_reprojection(platform, channel, data, filename):
 
 
 def increased_grid(polygon, km_per_pixel=1, delta_factor=1):
-    min_lat = np.min(polygon[:, 1])
-    max_lat = np.max(polygon[:, 1])
+    lats, lons = misc.lat_lon_from_polygon(polygon)
 
-    min_lon = np.min(polygon[:, 0])
-    max_lon = np.max(polygon[:, 0])
+    min_lat = np.min(lats)
+    max_lat = np.max(lats)
+    min_lon = np.min(lons)
+    max_lon = np.max(lons)
 
     delta_lon = max_lon - min_lon
     delta_lat = max_lat - min_lat

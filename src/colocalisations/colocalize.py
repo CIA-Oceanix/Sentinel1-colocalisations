@@ -13,12 +13,12 @@ matplotlib.use('agg')
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
-from package_utils.sentinel1 import get_iw_latlon
-from package_utils.closest_data import get_closest_filenames
-from package_utils.read_from import read_from_files_per_platform
-from package_utils.projection import reproject, save_reprojection, generate_gif
-from package_utils.misc import log_print
-from package_utils.check_args import check_args
+from colocalisations.package_utils.sentinel1 import get_iw_latlon
+from colocalisations.package_utils.closest_data import get_closest_filenames
+from colocalisations.package_utils import read_from_files_per_platform
+from colocalisations.package_utils.projection import reproject, save_reprojection, generate_gif
+from colocalisations.package_utils.misc import log_print
+from colocalisations.package_utils.check_args import check_args
 
 
 def main(
@@ -34,7 +34,7 @@ def main(
         data=None,
         max_timedelta=None,
         time_step=None,
-        create_gif=None,
+        create_gif=False,
         verbose=None,
         delta_factor=None,
         continue_on_error=False

@@ -10,7 +10,7 @@ from . import check_args
 from . import download
 from . import projection
 from . import read_from
-
+from . import misc
 
 def get_bucket_url(platform, channel, date):
     if platform in 'ERA5':
@@ -116,15 +116,16 @@ def get_file_urls(channel, iw_datetime, bucket_urls_per_platform, time_step, url
 
 
 def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel, requested_date=None):
-    mean_iw_lat = np.mean(iw_polygon[:, 1])
-    mean_iw_lon = np.mean(iw_polygon[:, 0])
+    lats, lons = misc.lat_lon_from_polygon(iw_polygon)
+    mean_iw_lat = np.mean(lats)
+    mean_iw_lon = np.mean(lons)
 
     closest_platform = None
 
     res = {}
     for platform, filenames in closest_filenames_per_platform.items():
         platform_lat, platform_lon, data = read_from.read_from_files_per_platform(filenames, platform, channel,
-                                                                        requested_date=requested_date)
+                                                                                  requested_date=requested_date)
         res[platform] = platform_lat, platform_lon, data
 
         mean_platform_lat = np.nanmean(platform_lat)
@@ -162,8 +163,10 @@ def get_closest_nexrad_station(polygon, blacklist=[]):
 
     nexrad_stations = get_nexrad_stations()
 
-    mean_iw_lat = np.mean(polygon[:, 1])
-    mean_iw_lon = np.mean(polygon[:, 0])
+    lats, lons = misc.lat_lon_from_polygon(polygon)
+    mean_iw_lat = np.mean(lats)
+    mean_iw_lon = np.mean(lons)
+
     closest_station_distance = np.inf
     for station, latlon in nexrad_stations.items():
         station_distance = projection.get_distance(mean_iw_lat, mean_iw_lon, latlon['lat'], latlon['lon'])

@@ -8,6 +8,15 @@ from . import check_args
 from . import cpt
 
 
+def lat_lon_from_polygon(polygon):
+    if isinstance(polygon, np.ndarray):
+        lats = polygon[:, 1]
+        lons = polygon[:, 0]
+    else:
+        lats, lons = polygon
+    return lats, lons
+
+
 def log_print(s, verbose_min, verbose, f=print, format='%Y-%m-%d %H:%M:%S'):
     if verbose >= verbose_min:
         f(f"{datetime.now().strftime(format)}\t{s}")

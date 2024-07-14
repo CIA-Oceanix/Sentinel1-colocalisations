@@ -85,11 +85,13 @@ def check_args(
             lon_key = 'owiLon'
         if time_key is None:
             time_key = 'firstMeasurementTime'
-        for filename in glob.glob(pattern):
+        filenames = glob.glob(pattern)
+        misc.log_print(f"Found {len(filenames)} files", 2, verbose)
+        for filename in filenames:
             with netCDF4.Dataset(filename) as dataset:
                 lats = dataset[lat_key][:]
                 lons = dataset[lon_key][:]
-                iw_datetime = parser.isoparse(dataset.getattr(time_key))
+                iw_datetime = parser.isoparse(getattr(dataset, time_key)).replace(tzinfo=None)
             key = iw_datetime.strftime('%Y%m%dT%H%M%S')
             requests.append((key, iw_datetime, (lats, lons)))
     elif sentinel1_key or sentinel1_keys_filename:

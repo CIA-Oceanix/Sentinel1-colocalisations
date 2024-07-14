@@ -54,7 +54,9 @@ def grid_from_polygon(polygon, shape):
 
 def plot_polygon(polygon, m):
     if polygon is not None:
-        x, y = m(polygon[:, 0], polygon[:, 1])
+        lats, lons = misc.lat_lon_from_polygon(polygon)
+        x, y = m(lons, lats)
+
         plt.plot(x, y, color="black", linestyle='--')
         plt.plot(x[[0, -1]], y[[0, -1]], color="black", linestyle='--')
 
