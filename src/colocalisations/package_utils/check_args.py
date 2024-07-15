@@ -110,7 +110,7 @@ def check_args(
         time_step=None,
         create_gif=None,
         verbose=None,
-        delta_factor=None
+        delta_factor=None,
 ):
     from . import sentinel1
     from . import misc

@@ -158,7 +158,9 @@ def main(
         time_step=5,
         create_gif=False,
         verbose=None,
-        delta_factor=None):
+        delta_factor=None,
+        output_folder = 'outputs'
+):
     keys, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
         pattern=pattern,
         lat_key=lat_key,
@@ -202,14 +204,20 @@ def main(
         lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel,
                                 requested_date=closest_date)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
+        data = {f"data": closest_file_data, 'lats': projection_lats, 'lons': projection_lons}
 
         os.makedirs('outputs/' + filename, exist_ok=True)
-        save_reprojection(closest_station, long_channel, closest_file_data, f'outputs/{filename}/{filename}_{channel}')
+        new_filename = f'{output_folder}/{filename}/{filename}_{channel}'
+        new_filename = save_reprojection(closest_station, long_channel, data, new_filename)
+        log_print(f"Saved in `{new_filename}`", 2, verbose)
 
         if create_gif:
             log_print(".gif generation is asked", 2, verbose)
-            generate_gif(polygon, channel, filenames_per_platform, f'outputs/{filename}/{filename}_{channel}.gif',
+            gif_filename = f'outputs/{filename}/{filename}_{channel}.gif'
+            generate_gif(polygon, channel, filenames_per_platform, gif_filename,
                          verbose, read, download_asked=False, delta_factor=delta_factor)
+        log_print(f"Saved in _`{new_filename}`", 2, verbose)
+
     log_print("Done", 1, verbose)
 
 

@@ -98,7 +98,8 @@ def main(
         create_gif=False,
         verbose=None,
         delta_factor=None,
-        continue_on_error=False
+        continue_on_error=False,
+        output_folder="outputs"
 ):
     keys, channel, verbose, platforms, create_gif, max_timedelta, time_step, delta_factor = check_args(
         pattern=pattern,
@@ -133,8 +134,11 @@ def main(
             log_print("Project on S1 lat/lon grid", 2, verbose)
             closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats,
                                           projection_lons)
-            save_reprojection(platform, channel, closest_file_data,
-                              f'outputs/{filename}/{filename}_{platform.split(":")[1]}')
+            data = {f"data": closest_file_data, 'lats': projection_lats, 'lons': projection_lons}
+
+            new_filename = f'{output_folder}/{filename}/{filename}_{platform.split(":")[1]}'
+            new_filename = save_reprojection(platform, channel, data, new_filename)
+            log_print(f"Saved in `{new_filename}`", 2, verbose)
 
             if create_gif:
                 log_print(".gif generation is asked", 2, verbose)
@@ -145,6 +149,7 @@ def main(
                     polygon, channel, products, gif_filename, verbose, read_products, delta_factor=delta_factor,
                     download_asked=False
                 )
+                log_print(f"Saved in `{gif_filename}`", 2, verbose)
         except Exception as e:
             log_print(f'Exception on request {filename}: {e}', 0, verbose)
             if continue_on_error:

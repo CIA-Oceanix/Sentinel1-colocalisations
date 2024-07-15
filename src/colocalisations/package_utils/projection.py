@@ -47,16 +47,21 @@ def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
 
 def save_reprojection(platform, channel, data, filename):
     kwargs = misc.platform_cmap_args(platform, channel)[0]
-    vmin = kwargs.get("vmin", np.nanmin(data))
-    vmax = kwargs.get("vmax", np.nanmax(data))
+    vmin = kwargs.get("vmin", np.nanmin(data['data']))
+    vmax = kwargs.get("vmax", np.nanmax(data['data']))
 
-    new_data = np.clip((data - vmin) / (vmax - vmin), 0, 1)
+    new_data = np.clip((data['data'] - vmin) / (vmax - vmin), 0, 1)
     new_data = kwargs["cmap"](new_data)
     new_data = (new_data * 255).astype(np.uint8)
 
     os.makedirs(os.path.split(filename)[0], exist_ok=True)
     PIL.Image.fromarray(new_data).save(filename + ".png")
-    np.savez_compressed(filename + ".npz", data)
+
+    data['platform'] = platform
+    data['channel'] = channel
+    new_filename = filename + ".npz"
+    np.savez_compressed(new_filename, **data)
+    return new_filename
 
 
 def increased_grid(polygon, km_per_pixel=1, delta_factor=1):
