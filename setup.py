@@ -3,12 +3,13 @@ from setuptools import setup, find_packages
 with open('README.md', 'r') as readme_file:
     readme = readme_file.read()
 
-requirements = []
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
 
 setup(
     name="colocalisations",
     python_requires='>3.6',
-    version="0.0.6",
+    version="0.0.7",
     author="Aurélien COLIN",
     author_email="acolin@groupcls.com",
     description="Utilities to colocate various info to Sentinel1 products",
