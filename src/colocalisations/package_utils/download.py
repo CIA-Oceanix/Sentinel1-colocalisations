@@ -82,7 +82,7 @@ def download_files(urls_per_platforms, closest=False):
         filenames[platform] = {}
         for date in dates:
             filenames[platform][date] = []
-            folder = f".temp/{platform}/"
+            folder = f"{misc.temp_folder()}/{platform}/"
             for url in urls_per_platforms[platform][date]:
                 filenames[platform][date].append(folder + url[6:].replace('/', '_'))
                 routing_args.append((url, folder))

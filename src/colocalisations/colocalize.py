@@ -9,10 +9,6 @@ import matplotlib
 
 matplotlib.use('agg')
 
-# shutil.rmtree('.temp', ignore_errors=True)
-os.makedirs('.temp', exist_ok=True)
-os.makedirs('outputs', exist_ok=True)
-
 from colocalisations.package_utils.sentinel1 import get_iw_latlon
 from colocalisations.package_utils.closest_data import get_closest_filenames
 from colocalisations.package_utils import read_from_files_per_platform

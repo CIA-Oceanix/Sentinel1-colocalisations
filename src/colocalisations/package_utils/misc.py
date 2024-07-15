@@ -1,11 +1,18 @@
 import sys
 from datetime import datetime
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from . import check_args
 from . import cpt
+
+
+def temp_folder():
+    folder = os.environ.get('TMP_FOLDER', '.temp')
+    os.makedirs(folder, exist_ok=True)
+    return folder
 
 
 def lat_lon_from_polygon(polygon):

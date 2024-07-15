@@ -13,12 +13,8 @@ from satpy import Scene
 
 from colocalisations.package_utils.sentinel1 import get_iw_latlon
 from colocalisations.package_utils.projection import reproject, save_reprojection, generate_gif
-from colocalisations.package_utils.misc import log_print, lat_lon_from_polygon
+from colocalisations.package_utils.misc import log_print, lat_lon_from_polygon, temp_folder
 from colocalisations.package_utils.check_args import check_args
-
-# shutil.rmtree('.temp', ignore_errors=True)
-os.makedirs('.temp', exist_ok=True)
-os.makedirs('outputs', exist_ok=True)
 
 
 def read_products(filenames, platform=None, channel=None, requested_date=None):
@@ -32,13 +28,13 @@ def read_products(filenames, platform=None, channel=None, requested_date=None):
 def download_product(product):
     with product.open() as source:
         new_filename = os.path.splitext(source.name)[0]
-        long_new_filename = ".temp/" + new_filename + ".nat"
+        long_new_filename = f"{temp_folder()}/{new_filename}.nat"
         if not os.path.exists(long_new_filename):
-            with open(f".temp/{source.name}", mode='wb') as file:
+            with open(f"{temp_folder()}/{source.name}", mode='wb') as file:
                 shutil.copyfileobj(source, file)
 
-            with zipfile.ZipFile(".temp/" + new_filename + ".zip", "r") as zip_ref:
-                zip_ref.extract(os.path.split(long_new_filename)[1], ".temp")
+            with zipfile.ZipFile(f"{temp_folder()}/{new_filename}.zip", "r") as zip_ref:
+                zip_ref.extract(os.path.split(long_new_filename)[1], temp_folder())
 
     return long_new_filename
 

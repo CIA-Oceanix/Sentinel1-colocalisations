@@ -26,9 +26,6 @@ from colocalisations.package_utils.projection import save_reprojection, reprojec
 from colocalisations.package_utils import read_melting_layer
 from colocalisations.package_utils.check_args import check_args
 
-# shutil.rmtree('.temp', ignore_errors=True)
-os.makedirs('.temp', exist_ok=True)
-os.makedirs('outputs', exist_ok=True)
 
 
 # 'DPR': 'Digital Instantaneous Precipitation Rate'
