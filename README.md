@@ -117,7 +117,7 @@ python colocalize_s3.py 20180117T180947
 ![DL_NEXRAD.png](readme/DL_NEXRAD.png)
 
 ```
-! python process_s1.py 20180117t180947 BiologicalSlicks
+! python process_s1.py BiologicalSlicks --key 20180117t180947 
 ```
 
 ![20180117t180947.png](readme/20180117t180947.png)

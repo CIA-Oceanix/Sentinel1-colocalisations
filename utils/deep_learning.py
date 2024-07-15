@@ -55,7 +55,7 @@ def get_apply_model_on_wideswath(model_key, batch_size=4):
     def apply_model_on_wideswath(filename):
         array = np.array(PIL.Image.open(filename), float)
         array = input_lambda(array)
-        array = cv2.resize(array, (array.shape[1]//resize_factor, array.shape[0]//resize_factor))
+        array = cv2.resize(array, (array.shape[1] // resize_factor, array.shape[0] // resize_factor))
 
         mosaic = get_mosaic(array, model.input_shape[1:3])
 
@@ -80,12 +80,13 @@ def apply_on_keys(filenames, getter, model_key):
         if output.shape[2] == 1:  output = output[:, :, [0, 0, 0, 0]]
         if output.shape[2] == 3:  output = output[:, :, [0, 1, 2, 0]]
 
-        polygon = getter(key)[1]
-        lat_grid, lon_grid = get_iw_latlon(polygon=polygon)
-        mask = globe.is_land(lat_grid, lon_grid)
-        mask = cv2.resize(mask.astype(np.uint8), output.shape[:2][::-1])
+        if getter is not None:
+            polygon = getter(key)[1]
+            lat_grid, lon_grid = get_iw_latlon(polygon=polygon)
+            mask = globe.is_land(lat_grid, lon_grid)
+            mask = cv2.resize(mask.astype(np.uint8), output.shape[:2][::-1])
+            output[:, :, 3] = np.where(mask > 0.5, 0, 1)
 
-        output[:, :, 3] = np.where(mask > 0.5, 0, 1)
         output = (np.clip(output, 0, 1) * (2 ** 8 - 1)).astype('uint8')
 
         os.makedirs(os.path.split(output_filename)[0], exist_ok=True)

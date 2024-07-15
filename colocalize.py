@@ -5,6 +5,7 @@ shutup.please()
 import os
 import fire
 import numpy as np
+import shutil
 
 np.seterr(all="ignore")
 
@@ -12,7 +13,7 @@ import matplotlib
 
 matplotlib.use('agg')
 
-# shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 

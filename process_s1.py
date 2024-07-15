@@ -12,7 +12,7 @@ from utils.misc import log_print
 from utils.rt import safe_to_tiff
 from utils.sentinel1 import getter_polygon_from_key
 
-#shutil.rmtree('.temp', ignore_errors=True)
+shutil.rmtree('.temp', ignore_errors=True)
 os.makedirs('.temp', exist_ok=True)
 os.makedirs('outputs', exist_ok=True)
 
@@ -30,15 +30,22 @@ def download_grd_from_asf(filename, folder=".temp"):
     return new_filename
 
 
-def main(key, model, verbose=1):
-    if len(key) == 15: keys = [key]
-    else: keys = get_keys(key)
+def main(model, zipname=None, key=None, verbose=1):
+    if key is not None:
+        if key.endswith('.txt'):
+            keys = get_keys(key)
+        elif len(key) == 15:
+            keys = [key]
 
-    log_print(f"Build IW getter", 2, verbose)
-    getter = getter_polygon_from_key('IW')
+        log_print(f"Build IW getter", 2, verbose)
+        getter = getter_polygon_from_key('IW')
 
-    log_print("Search the zipnames using the getter", 2, verbose)
-    zipnames = [getter(key)[0] + '.zip' for key in keys]
+        log_print("Search the zipnames using the getter", 2, verbose)
+        zipnames = [getter(key)[0] + '.zip' for key in keys]
+    else:
+        assert zipname is not None
+        zipnames = [zipname]
+        getter = None
 
     log_print("Download the zipnames using ASF", 2, verbose)
     zip_filenames = [download_grd_from_asf(zipname) for zipname in zipnames]
@@ -61,6 +68,7 @@ def main(key, model, verbose=1):
         key = os.path.split(filename)[1].split('-')[4]
         new_filename = f"outputs/{key}.tiff"
         shutil.copyfile(filename, new_filename)
+        log_print(f"Exported in {new_filename}", 1, verbose)
 
     log_print("Done", 1, verbose)
 
