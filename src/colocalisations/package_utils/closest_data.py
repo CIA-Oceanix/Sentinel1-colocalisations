@@ -147,7 +147,10 @@ def get_closest_nexrad_station(polygon, blacklist=[]):
             return dd
 
         nexrad_stations = {}
-        with open('res/nexrad_stations.txt', 'r') as file:
+
+        folder = os.path.join(os.path.dirname(os.path.dirname(__file__)))
+        filename = os.path.join(folder, "res/nexrad_stations.txt")
+        with open(filename, 'r') as file:
             for line in file.readlines()[1:]:
                 line = line.split('\t')
 

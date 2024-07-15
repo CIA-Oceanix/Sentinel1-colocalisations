@@ -1,4 +1,5 @@
 import colorsys
+import os.path
 
 import matplotlib as mpl
 import numpy as np
@@ -6,9 +7,11 @@ import numpy as np
 
 def loadCPT(colormap):
     try:
-        f = open("res/colormap/" + colormap)
+        folder = os.path.join(os.path.dirname(os.path.dirname(__file__)))
+        filename = os.path.join(folder, "res/colormap", colormap)
+        f = open(filename)
     except:
-        print("File ", colormap, "not found")
+        print("File ", filename, "not found")
         return None
 
     lines = f.readlines()
