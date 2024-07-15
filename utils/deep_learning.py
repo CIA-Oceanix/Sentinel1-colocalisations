@@ -16,6 +16,7 @@ import MightyMosaic.MightyMosaic
 get_mosaic = lambda x, y: MightyMosaic.MightyMosaic.from_array(x, y, fill_mode='reflect', overlap_factor=2)
 
 from utils.sentinel1 import get_iw_latlon
+from utils.deep_learning_multiscale import get_apply_multiscale_model_on_wideswath
 
 
 def rainfall_rgb(im):
@@ -70,15 +71,24 @@ def get_apply_model_on_wideswath(model_key, batch_size=4):
 def apply_on_keys(filenames, getter, model_key):
     output_filenames = []
 
-    apply_model = get_apply_model_on_wideswath(model_key)
+    if 'multiscale' in model_key:
+        get_apply_model = get_apply_multiscale_model_on_wideswath
+    else:
+        get_apply_model = get_apply_model_on_wideswath
+    apply_model = get_apply_model(model_key)
+
     for tiff_filename in filenames:
         key = os.path.split(tiff_filename)[1].split('-')[4]
         output_filename = f"outputs/{key}/DL_{model_key}.png"
 
         output = apply_model(tiff_filename)
 
-        if output.shape[2] == 1:  output = output[:, :, [0, 0, 0, 0]]
-        if output.shape[2] == 3:  output = output[:, :, [0, 1, 2, 0]]
+        if len(output.shape) == 2:
+            output = np.expand_dims(output, axis=2)
+        if output.shape[2] == 1:
+            output = output[:, :, [0, 0, 0, 0]]
+        elif output.shape[2] == 3:
+            output = output[:, :, [0, 1, 2, 0]]
 
         if getter is not None:
             polygon = getter(key)[1]
