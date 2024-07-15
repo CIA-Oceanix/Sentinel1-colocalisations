@@ -1,0 +1,2 @@
+include src/colocalisations/res/colormap/IR4AVHRR6.cpt
+include src/colocalisations/res/nexrad_stations.txt
