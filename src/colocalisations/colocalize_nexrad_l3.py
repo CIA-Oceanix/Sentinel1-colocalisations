@@ -1,4 +1,5 @@
 import os
+import sys
 import tarfile
 
 import fire
@@ -43,7 +44,10 @@ def cached_command(command):
 def get_urls(channel, date):
     urls = []
     prefix = f"{date.year}/{date.month:02}/{date.day:02}/{channel}"
-    lines = cached_command('gsutil -q ls -l gs://gcp-public-data-nexrad-l3/' + prefix)
+
+    command = 'gsutil -q ls -l gs://gcp-public-data-nexrad-l3/' + prefix
+    lines = cached_command(command)
+
     for line in lines:
         line = line.replace('\n', '')
         if line.endswith('.tar.gz') or line.endswith('.Z'):
@@ -57,7 +61,10 @@ def get_bucket_urls(channel, iw_datetime, max_timedelta, time_step):
 
     urls = {channel: {}}
     for date in dates:
-        urls[channel][date] = get_urls(channel, date)
+        date_urls = get_urls(channel, date)
+        if date_urls:
+            urls[channel][date] = date_urls
+    urls = {k: v for k, v in urls.items() if v}
     return urls
 
 
@@ -186,6 +193,10 @@ def main(
 
         log_print(f"Downloading", 2, verbose)
         urls_per_platforms = get_bucket_urls(closest_station, requested_date, max_timedelta, time_step)
+        if not urls_per_platforms:
+            log_print(f"No product found in the vicinity", 2, verbose)
+            continue
+
         filenames_per_platform = download_files(urls_per_platforms, closest=False)
 
         log_print("Extracting", 2, verbose)
@@ -197,6 +208,7 @@ def main(
         log_print("Project on S1 lat/lon grid", 2, verbose)
         closest_date = \
             sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
+
         lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel,
                                 requested_date=closest_date)
         closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)

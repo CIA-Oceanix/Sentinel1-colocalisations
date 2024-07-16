@@ -11,6 +11,7 @@ from . import download
 from . import projection
 from . import read_from
 from . import misc
+from . import maps
 
 def get_bucket_url(platform, channel, date):
     if platform in 'ERA5':
@@ -131,7 +132,7 @@ def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel, re
         mean_platform_lat = np.nanmean(platform_lat)
         mean_platform_lon = np.nanmean(platform_lon)
 
-        distance_to_center = projection.get_distance(mean_iw_lat, mean_iw_lon, mean_platform_lat, mean_platform_lon)
+        distance_to_center = maps.get_distance(mean_iw_lat, mean_iw_lon, mean_platform_lat, mean_platform_lon)
         if closest_platform is None or distance_to_center < smallest_distance:
             smallest_distance = distance_to_center
             closest_platform = platform
@@ -172,7 +173,7 @@ def get_closest_nexrad_station(polygon, blacklist=[]):
 
     closest_station_distance = np.inf
     for station, latlon in nexrad_stations.items():
-        station_distance = projection.get_distance(mean_iw_lat, mean_iw_lon, latlon['lat'], latlon['lon'])
+        station_distance = maps.get_distance(mean_iw_lat, mean_iw_lon, latlon['lat'], latlon['lon'])
         if station_distance < closest_station_distance:
             closest_station_distance = station_distance
             closest_station = station

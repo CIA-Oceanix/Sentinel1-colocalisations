@@ -9,7 +9,7 @@ with open('requirements.txt') as f:
 setup(
     name="colocalisations",
     python_requires='>3.6',
-    version="0.0.8",
+    version="0.0.9",
     author="Aurélien COLIN",
     author_email="acolin@groupcls.com",
     description="Utilities to colocate various info to Sentinel1 products",
