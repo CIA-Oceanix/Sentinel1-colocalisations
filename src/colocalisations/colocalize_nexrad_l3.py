@@ -22,7 +22,7 @@ WGS84 = pyproj.Geod(ellps='WGS84')
 from colocalisations.package_utils.misc import log_print
 from colocalisations.package_utils.download import download_files
 from colocalisations.package_utils.sentinel1 import get_iw_latlon
-from colocalisations.package_utils.closest_data import get_closest_nexrad_station
+from colocalisations.package_utils.closest_data import get_nearby_nexrad_station
 from colocalisations.package_utils.projection import save_reprojection, reproject, generate_gif
 from colocalisations.package_utils.nexrad_l3 import read_melting_layer
 from colocalisations.package_utils.check_args import check_args
@@ -187,44 +187,45 @@ def main(
         projection_lats, projection_lons = get_iw_latlon(polygon=polygon)
 
         log_print(f"Retrieve NEXRAD colocalizations", 2, verbose)
-        closest_station = get_closest_nexrad_station(polygon)
-        long_channel = channel + closest_station[1:]
-        log_print(f"Closest station is {closest_station}", 2, verbose)
+        nearby_stations = get_nearby_nexrad_station(polygon)
+        log_print(f"Found {len(nearby_stations)} stations", 2, verbose)
+        for station, distance in nearby_stations.items():
+            long_channel = channel + station[1:]
+            log_print(f"Current station is {station}", 2, verbose)
 
-        log_print(f"Downloading", 2, verbose)
-        urls_per_platforms = get_bucket_urls(closest_station, requested_date, max_timedelta, time_step)
-        if not urls_per_platforms:
-            log_print(f"No product found in the vicinity", 2, verbose)
-            continue
+            log_print(f"Downloading", 2, verbose)
+            urls_per_platforms = get_bucket_urls(station, requested_date, max_timedelta, time_step)
+            if not urls_per_platforms:
+                log_print(f"No product found in the vicinity", 2, verbose)
+                continue
 
-        filenames_per_platform = download_files(urls_per_platforms, closest=False)
+            filenames = download_files(urls_per_platforms, closest=False)
 
-        log_print("Extracting", 2, verbose)
-        filenames_per_platform = untar(filenames_per_platform, long_channel)
-        if not filenames_per_platform[closest_station]:
-            log_print(f"Station {closest_station} has no data for channel {channel} at {requested_date}", 1, verbose)
-            continue
+            log_print("Extracting", 2, verbose)
+            filenames = untar(filenames, long_channel)
+            if not filenames[station]:
+                log_print(f"Station {station} has no data for channel {channel} at {requested_date}", 1, verbose)
+                continue
 
-        log_print("Project on S1 lat/lon grid", 2, verbose)
-        closest_date = \
-            sorted([(abs(requested_date - date), date) for date in filenames_per_platform[closest_station]])[0][1]
+            log_print("Project on S1 lat/lon grid", 2, verbose)
+            closest_date = sorted([(abs(requested_date - date), date) for date in filenames[station]])[0][1]
 
-        lats, lons, data = read(filenames_per_platform[closest_station][closest_date], channel=long_channel,
-                                requested_date=closest_date)
-        closest_file_data = reproject(closest_station, data, lats, lons, projection_lats, projection_lons)
-        data = {f"data": closest_file_data, 'lats': projection_lats, 'lons': projection_lons}
+            lats, lons, data = read(filenames[station][closest_date], channel=long_channel,
+                                    requested_date=closest_date)
+            closest_file_data = reproject(station, data, lats, lons, projection_lats, projection_lons)
+            data = {f"data": closest_file_data, 'lats': projection_lats, 'lons': projection_lons, 'distance': distance}
 
-        os.makedirs('outputs/' + filename, exist_ok=True)
-        new_filename = f'{output_folder}/{filename}/{filename}_{channel}'
-        new_filename = save_reprojection(closest_station, long_channel, data, new_filename)
-        log_print(f"Saved in `{new_filename}`", 2, verbose)
+            os.makedirs('outputs/' + filename, exist_ok=True)
+            new_filename = f'{output_folder}/{filename}/{filename}_{long_channel}'
+            new_filename = save_reprojection(station, long_channel, data, new_filename)
+            log_print(f"Saved in `{new_filename}`", 2, verbose)
 
-        if create_gif:
-            log_print(".gif generation is asked", 2, verbose)
-            gif_filename = f'outputs/{filename}/{filename}_{channel}.gif'
-            generate_gif(polygon, channel, filenames_per_platform, gif_filename,
-                         verbose, read, download_asked=False, delta_factor=delta_factor)
-        log_print(f"Saved in _`{new_filename}`", 2, verbose)
+            if create_gif:
+                log_print(".gif generation is asked", 2, verbose)
+                gif_filename = f'outputs/{filename}/{filename}_{channel}.gif'
+                generate_gif(polygon, channel, filenames, gif_filename,
+                             verbose, read, download_asked=False, delta_factor=delta_factor)
+            log_print(f"Saved in _`{new_filename}`", 2, verbose)
 
     log_print("Done", 1, verbose)
 

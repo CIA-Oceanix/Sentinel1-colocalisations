@@ -7,7 +7,7 @@ import numpy as np
 from dateutil import parser
 
 from . import misc
-
+from . import sentinel1
 
 SATELLITE_PLATFORMS = {
     'GOES': ["goes16", "goes17", "goes18"],
@@ -112,9 +112,6 @@ def check_args(
         verbose=None,
         delta_factor=None,
 ):
-    from . import sentinel1
-    from . import misc
-
     # Set default values
     if verbose is None: verbose = 2
     if requests_filename is None and sensor_operational_mode is None: sensor_operational_mode = 'IW'

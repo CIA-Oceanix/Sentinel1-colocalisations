@@ -68,7 +68,7 @@ def main(
             log_print("Project on S1 lat/lon grid", 2, verbose)
             closest_file_data = reproject(platform, closest_file_data, platform_lat, platform_lon, projection_lats,
                                           projection_lons)
-            data = {f"data": closest_file_data, 'lats': platform_lat, 'lons': platform_lon}
+            data = {f"data": closest_file_data, 'lats': projection_lats, 'lons': projection_lons}
             new_filename = f'{output_folder}/{filename}/{filename}_{channel}'
             new_filename = save_reprojection(platform, channel, data, new_filename)
             log_print(f"Saved in `{new_filename}`", 2, verbose)

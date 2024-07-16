@@ -6,9 +6,9 @@ import numpy as np
 
 
 def loadCPT(colormap):
+    folder = os.path.join(os.path.dirname(os.path.dirname(__file__)))
+    filename = os.path.join(folder, "res/colormap", colormap)
     try:
-        folder = os.path.join(os.path.dirname(os.path.dirname(__file__)))
-        filename = os.path.join(folder, "res/colormap", colormap)
         f = open(filename)
     except:
         print("File ", filename, "not found")

@@ -8,10 +8,10 @@ import numpy as np
 
 from . import check_args
 from . import download
-from . import projection
 from . import read_from
 from . import misc
 from . import maps
+
 
 def get_bucket_url(platform, channel, date):
     if platform in 'ERA5':
@@ -139,7 +139,7 @@ def get_closest_platform(closest_filenames_per_platform, iw_polygon, channel, re
     return closest_platform, res[closest_platform]
 
 
-def get_closest_nexrad_station(polygon, blacklist=[]):
+def get_nearby_nexrad_station(polygon, blacklist=[]):
     def get_nexrad_stations():
         def dms2dd(degrees, minutes, seconds, direction):
             dd = float(degrees) + float(minutes) / 60 + float(seconds) / (60 * 60);
@@ -168,22 +168,19 @@ def get_closest_nexrad_station(polygon, blacklist=[]):
     nexrad_stations = get_nexrad_stations()
 
     lats, lons = misc.lat_lon_from_polygon(polygon)
-    mean_iw_lat = np.mean(lats)
-    mean_iw_lon = np.mean(lons)
 
-    closest_station_distance = np.inf
+    nearby_stations = {}
     for station, latlon in nexrad_stations.items():
-        station_distance = maps.get_distance(mean_iw_lat, mean_iw_lon, latlon['lat'], latlon['lon'])
-        if station_distance < closest_station_distance:
-            closest_station_distance = station_distance
-            closest_station = station
+        station_distances = maps.get_distance(lats, lons, latlon['lat'], latlon['lon'])
+        if np.nanmin(station_distances) < 100:  # minimum maximum distance (in km) to any pixel of the data
+            nearby_stations[station] = station_distances
 
-    return closest_station
+    return nearby_stations
 
 
 def get_closest_filenames(channel, iw_polygon, iw_datetime, max_timedelta, time_step, platforms):
     if channel == "nexrad-level2":
-        platforms = [get_closest_nexrad_station(iw_polygon)]
+        platforms = [get_nearby_nexrad_station(iw_polygon)]
 
     url_basis, bucket_urls_per_platform = get_bucket_urls(
         channel, iw_datetime, max_timedelta=max_timedelta, time_step=time_step, platforms=platforms
