@@ -34,7 +34,12 @@ def reproject(platform, data, platform_lat, platform_lon, owi_lat, owi_lon):
 
     platform_lat[np.isnan(platform_lat)] = 0
     platform_lon[np.isnan(platform_lon)] = 0
-    data[np.isnan(data)] = 0
+
+    data = data.astype(np.float32)
+    data[0] = np.nan
+    data[-1] = np.nan
+    data[:, -1] = np.nan
+    data[:, 0] = np.nan
 
     new_data = griddata(
         np.stack((platform_lat.flatten(), platform_lon.flatten()), axis=1),

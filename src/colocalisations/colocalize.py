@@ -1,5 +1,3 @@
-import os
-
 import fire
 import numpy as np
 
