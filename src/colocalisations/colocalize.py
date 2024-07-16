@@ -11,7 +11,7 @@ matplotlib.use('agg')
 
 from colocalisations.package_utils.sentinel1 import get_iw_latlon
 from colocalisations.package_utils.closest_data import get_closest_filenames
-from colocalisations.package_utils import read_from_files_per_platform
+from colocalisations.package_utils.read_from import read_from_files_per_platform
 from colocalisations.package_utils.projection import reproject, save_reprojection, generate_gif
 from colocalisations.package_utils.misc import log_print
 from colocalisations.package_utils.check_args import check_args
